@@ -63,7 +63,7 @@ const studentSchema = new Schema<IStudent>(
     },
     batch: {
       type: String,
-      required: true,
+      required: false, // Auto-calculated from registrationNo in pre-save hook
     },
     semester: {
       type: Number,
