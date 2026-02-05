@@ -413,3 +413,71 @@ export const unregisterFromEvent = asyncHandler(
     });
   }
 );
+
+/**
+ * @desc    Get student portfolio by username (Public)
+ * @route   GET /api/v1/students/portfolio/:username
+ * @access  Public
+ */
+export const getStudentPortfolio = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const { username } = req.params;
+
+    const student = await Student.findOne({ username })
+      .select('-password -emailVerificationToken -emailVerificationExpires -passwordResetToken -passwordResetExpires')
+      .populate({
+        path: 'registeredEvents',
+        select: 'title description date location thumbnail',
+      });
+
+    if (!student) {
+      throw new AppError('Student portfolio not found', 404);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { student },
+    });
+  }
+);
+
+/**
+ * @desc    Delete student account
+ * @route   DELETE /api/v1/students/me
+ * @access  Private (Student)
+ */
+export const deleteAccount = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const studentId = req.student?._id;
+
+    if (!studentId) {
+      throw new AppError('Student not found', 404);
+    }
+
+    // Remove student from all registered events
+    await Event.updateMany(
+      { registrations: studentId },
+      { $pull: { registrations: studentId } }
+    );
+
+    // Delete the student account
+    await Student.findByIdAndDelete(studentId);
+
+    // Clear cookies
+    res.cookie('studentJwt', '', {
+      expires: new Date(0),
+      httpOnly: true,
+    });
+    res.cookie('studentRefreshToken', '', {
+      expires: new Date(0),
+      httpOnly: true,
+    });
+
+    logger.info(`Student account deleted: ${studentId}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Account deleted successfully',
+    });
+  }
+);

@@ -15,6 +15,8 @@ import {
   getMyEvents,
   registerForEvent,
   unregisterFromEvent,
+  getStudentPortfolio,
+  deleteAccount,
 } from '../controllers/student.controller';
 import { protect, restrictTo, protectStudent } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
@@ -58,12 +60,14 @@ const studentValidation = {
 router.post('/register', validate(studentValidation.register), register);
 router.post('/login', validate(studentValidation.login), login);
 router.get('/verify-email/:token', verifyEmail);
+router.get('/portfolio/:username', getStudentPortfolio);
 
 // Student authenticated routes
 router.use(protectStudent);
 
 router.get('/me', getProfile);
 router.patch('/me', updateProfile);
+router.delete('/me', deleteAccount);
 router.post('/change-password', changePassword);
 router.get('/my-events', getMyEvents);
 router.post('/events/:eventId/register', registerForEvent);

@@ -11,11 +11,17 @@ export interface IStudent extends Document {
   name: string;
   email: string;
   password: string;
+  username: string;
   registrationNo: string;
   batch: string;
   semester?: number;
   contactNo?: string;
   avatar?: string;
+  bio?: string;
+  skills?: string[];
+  github?: string;
+  linkedin?: string;
+  website?: string;
   isEmailVerified: boolean;
   emailVerificationToken?: string;
   emailVerificationExpires?: Date;
@@ -50,6 +56,14 @@ const studentSchema = new Schema<IStudent>(
       minlength: [8, 'Password must be at least 8 characters'],
       select: false,
     },
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      lowercase: true,
+      match: [/^[a-z0-9_-]+$/, 'Username can only contain lowercase letters, numbers, hyphens, and underscores'],
+    },
     registrationNo: {
       type: String,
       required: [true, 'Please provide your registration number'],
@@ -80,6 +94,41 @@ const studentSchema = new Schema<IStudent>(
       },
     },
     avatar: String,
+    bio: {
+      type: String,
+      maxlength: [500, 'Bio cannot be more than 500 characters'],
+    },
+    skills: [{
+      type: String,
+      trim: true,
+    }],
+    github: {
+      type: String,
+      validate: {
+        validator: function (v: string) {
+          return !v || /^https?:\/\/(www\.)?github\.com\/[a-zA-Z0-9_-]+\/?$/.test(v);
+        },
+        message: 'Please provide a valid GitHub profile URL',
+      },
+    },
+    linkedin: {
+      type: String,
+      validate: {
+        validator: function (v: string) {
+          return !v || /^https?:\/\/(www\.)?linkedin\.com\/(in|pub)\/[a-zA-Z0-9_-]+\/?$/.test(v);
+        },
+        message: 'Please provide a valid LinkedIn profile URL',
+      },
+    },
+    website: {
+      type: String,
+      validate: {
+        validator: function (v: string) {
+          return !v || validator.isURL(v);
+        },
+        message: 'Please provide a valid website URL',
+      },
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,
@@ -103,6 +152,7 @@ const studentSchema = new Schema<IStudent>(
 // Index for better query performance
 studentSchema.index({ email: 1, registrationNo: 1 });
 studentSchema.index({ batch: 1 });
+studentSchema.index({ username: 1 });
 
 // Pre-save middleware to hash password
 studentSchema.pre('save', async function (next) {
@@ -120,6 +170,19 @@ studentSchema.pre('save', function (next) {
     if (match) {
       this.batch = match[1];
     }
+  }
+  next();
+});
+
+// Pre-save middleware to generate default username if not provided
+studentSchema.pre('save', async function (next) {
+  if (!this.username && this.registrationNo) {
+    // Convert EG/2024/1234 to eg_2024_1234
+    const defaultUsername = this.registrationNo
+      .toLowerCase()
+      .replace(/\//g, '_');
+    
+    this.username = defaultUsername;
   }
   next();
 });
