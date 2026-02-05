@@ -22,6 +22,9 @@ import blogRoutes from './routes/blog.routes';
 import contactRoutes from './routes/contact.routes';
 import newsletterRoutes from './routes/newsletter.routes';
 import teamRoutes from './routes/team.routes';
+import studentRoutes from './routes/student.routes';
+import competitionTeamRoutes from './routes/competitionTeam.routes';
+import analyticsRoutes from './routes/analytics.routes';
 
 // Import middleware
 import { errorHandler, notFound } from './middleware/error.middleware';
@@ -47,10 +50,12 @@ app.use(helmet({
 }));
 
 // CORS configuration
+import config from './config';
+
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:5173',
+      config.frontendUrl,
       'http://localhost:3000',
       'http://localhost:5173',
     ];
@@ -179,6 +184,9 @@ app.use('/api/v1/blog', blogRoutes);
 app.use('/api/v1/contact', contactRoutes);
 app.use('/api/v1/newsletter', newsletterRoutes);
 app.use('/api/v1/team', teamRoutes);
+app.use('/api/v1/students', studentRoutes);
+app.use('/api/v1/competition-teams', competitionTeamRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 
 // ============================================
 // Error Handling

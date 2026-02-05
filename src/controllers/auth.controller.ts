@@ -11,16 +11,16 @@ import config from '../config';
 
 // Generate JWT token
 const signToken = (id: string): string => {
-  return jwt.sign({ id }, config.jwt.secret, {
+  return jwt.sign({ id }, config.jwt.secret as jwt.Secret, {
     expiresIn: config.jwt.expiresIn,
-  });
+  } as jwt.SignOptions);
 };
 
 // Generate refresh token
 const signRefreshToken = (id: string): string => {
-  return jwt.sign({ id }, config.jwt.refreshSecret, {
+  return jwt.sign({ id }, config.jwt.refreshSecret as jwt.Secret, {
     expiresIn: config.jwt.refreshExpiresIn,
-  });
+  } as jwt.SignOptions);
 };
 
 // Create and send tokens

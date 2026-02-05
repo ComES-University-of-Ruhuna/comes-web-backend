@@ -3,7 +3,7 @@
 // ============================================
 
 export { errorHandler, notFound } from './error.middleware';
-export { protect, optionalAuth, restrictTo, ownerOrAdmin } from './auth.middleware';
+export { protect, optionalAuth, restrictTo, ownerOrAdmin, protectStudent } from './auth.middleware';
 export { 
   validate, 
   commonValidations, 

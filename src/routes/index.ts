@@ -10,3 +10,6 @@ export { default as blogRoutes } from './blog.routes';
 export { default as contactRoutes } from './contact.routes';
 export { default as newsletterRoutes } from './newsletter.routes';
 export { default as teamRoutes } from './team.routes';
+export { default as studentRoutes } from './student.routes';
+export { default as competitionTeamRoutes } from './competitionTeam.routes';
+export { default as analyticsRoutes } from './analytics.routes';

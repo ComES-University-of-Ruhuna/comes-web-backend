@@ -5,20 +5,23 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { User, IUser } from '../models/user.model';
+import { Student, IStudent } from '../models/student.model';
 import { asyncHandler, AuthenticationError, AuthorizationError } from '../utils';
 import config from '../config';
 
-// Extend Express Request to include user
+// Extend Express Request to include user and student
 declare global {
   namespace Express {
     interface Request {
       user?: IUser;
+      student?: IStudent;
     }
   }
 }
 
 interface JwtPayload {
   id: string;
+  type?: 'student' | 'user';
   iat: number;
   exp: number;
 }
@@ -146,3 +149,54 @@ export const ownerOrAdmin = (getOwnerId: (req: Request) => string) => {
     next();
   };
 };
+
+/**
+ * Protect student routes - require student authentication
+ */
+export const protectStudent = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    let token: string | undefined;
+
+    // Check for token in Authorization header
+    if (req.headers.authorization?.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+    // Check for token in cookies
+    else if (req.cookies?.studentJwt) {
+      token = req.cookies.studentJwt;
+    }
+
+    if (!token) {
+      throw new AuthenticationError('You are not logged in. Please log in to access this resource.');
+    }
+
+    try {
+      // Verify token
+      const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
+
+      // Check if this is a student token
+      if (decoded.type !== 'student') {
+        throw new AuthenticationError('Invalid token type. Please log in as a student.');
+      }
+
+      // Check if student still exists
+      const currentStudent = await Student.findById(decoded.id);
+
+      if (!currentStudent) {
+        throw new AuthenticationError('The student belonging to this token no longer exists.');
+      }
+
+      // Grant access to protected route
+      req.student = currentStudent;
+      next();
+    } catch (error) {
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new AuthenticationError('Invalid token. Please log in again.');
+      }
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new AuthenticationError('Your token has expired. Please log in again.');
+      }
+      throw error;
+    }
+  }
+);

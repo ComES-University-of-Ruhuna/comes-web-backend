@@ -10,3 +10,6 @@ export * as blogController from './blog.controller';
 export * as contactController from './contact.controller';
 export * as newsletterController from './newsletter.controller';
 export * as teamController from './team.controller';
+export * as studentController from './student.controller';
+export * as competitionTeamController from './competitionTeam.controller';
+export * as analyticsController from './analytics.controller';
