@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 import { Student, IStudent } from '../models/student.model';
 import { Event } from '../models';
 import { asyncHandler, AppError, logger } from '../utils';
+import { sendEmail } from '../utils/email';
 import config from '../config';
 
 // Generate JWT token
@@ -478,6 +479,104 @@ export const deleteAccount = asyncHandler(
     res.status(200).json({
       success: true,
       message: 'Account deleted successfully',
+    });
+  }
+);
+
+/**
+ * @desc    Delete student account by admin
+ * @route   DELETE /api/v1/students/:id
+ * @access  Private (Admin)
+ */
+export const deleteStudentByAdmin = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+
+    const student = await Student.findById(id);
+
+    if (!student) {
+      throw new AppError('Student not found', 404);
+    }
+
+    // Remove student from all registered events
+    await Event.updateMany(
+      { registrations: id },
+      { $pull: { registrations: id } }
+    );
+
+    // Delete the student account
+    await Student.findByIdAndDelete(id);
+
+    logger.info(`Student account deleted by admin: ${id}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Student account deleted successfully',
+    });
+  }
+);
+
+/**
+ * @desc    Send notification to student
+ * @route   POST /api/v1/students/notify
+ * @access  Private (Admin)
+ */
+export const sendNotificationToStudent = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const { studentId, subject, message } = req.body;
+
+    if (!studentId || !subject || !message) {
+      throw new AppError('Student ID, subject, and message are required', 400);
+    }
+
+    const student = await Student.findById(studentId);
+
+    if (!student) {
+      throw new AppError('Student not found', 404);
+    }
+
+    // Send email notification
+    await sendEmail({
+      to: student.email,
+      subject: subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">ComES - University of Ruhuna</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+              Dear <strong>${student.name}</strong>,
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3B82F6;">
+              <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0;">
+                ${message.split('\n').join('<br>')}
+              </p>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 30px;">
+              Best regards,<br>
+              <strong>ComES Team</strong><br>
+              University of Ruhuna
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+              This is an automated notification from ComES. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
+      `,
+    });
+
+    logger.info(`Notification sent to student ${student.email}: ${subject}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification sent successfully',
     });
   }
 );

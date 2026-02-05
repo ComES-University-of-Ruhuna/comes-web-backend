@@ -17,6 +17,8 @@ import {
   unregisterFromEvent,
   getStudentPortfolio,
   deleteAccount,
+  deleteStudentByAdmin,
+  sendNotificationToStudent,
 } from '../controllers/student.controller';
 import { protect, restrictTo, protectStudent } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
@@ -76,5 +78,7 @@ router.get('/search', searchStudents);
 
 // Admin routes
 router.get('/', protect, restrictTo('admin'), getAllStudents);
+router.delete('/:id', protect, restrictTo('admin'), deleteStudentByAdmin);
+router.post('/notify', protect, restrictTo('admin'), sendNotificationToStudent);
 
 export default router;
