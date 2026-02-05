@@ -219,7 +219,7 @@ export const verifyEmail = asyncHandler(
 export const getAllStudents = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const limit = parseInt(req.query.limit as string) || 1000; // Default to 1000 to get all students
     const skip = (page - 1) * limit;
 
     // Build filter
@@ -234,7 +234,12 @@ export const getAllStudents = asyncHandler(
     }
 
     const [students, total] = await Promise.all([
-      Student.find(filter).skip(skip).limit(limit).sort('-createdAt'),
+      Student.find(filter)
+        .select('-password -emailVerificationToken -emailVerificationExpires -passwordResetToken -passwordResetExpires')
+        .populate('registeredEvents')
+        .skip(skip)
+        .limit(limit)
+        .sort('-createdAt'),
       Student.countDocuments(filter),
     ]);
 
