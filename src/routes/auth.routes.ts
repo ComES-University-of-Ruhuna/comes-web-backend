@@ -12,6 +12,7 @@ import {
   resetPassword,
   updatePassword,
   getMe,
+  createAdmin,
 } from '../controllers/auth.controller';
 import { protect } from '../middleware/auth.middleware';
 import { validate, authValidations } from '../middleware/validation.middleware';
@@ -25,6 +26,7 @@ router.post('/logout', logout);
 router.post('/refresh-token', refreshToken);
 router.post('/forgot-password', validate(authValidations.forgotPassword), forgotPassword);
 router.patch('/reset-password/:token', validate(authValidations.resetPassword), resetPassword);
+router.post('/create-admin', createAdmin);
 
 // Protected routes
 router.use(protect);

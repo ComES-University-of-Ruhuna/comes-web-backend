@@ -342,3 +342,62 @@ export const getMe = asyncHandler(
     });
   }
 );
+
+/**
+ * @desc    Create admin account
+ * @route   POST /api/v1/auth/create-admin
+ * @access  Public (but should be secured in production with a secret key)
+ */
+export const createAdmin = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const { name, email, password, passwordConfirm, secretKey } = req.body;
+
+    // Check secret key (in production, use env variable)
+    const ADMIN_CREATION_SECRET = process.env.ADMIN_CREATION_SECRET || 'ComES@Admin2024';
+    if (secretKey !== ADMIN_CREATION_SECRET) {
+      throw new AppError('Invalid secret key', 403);
+    }
+
+    // Validate required fields
+    if (!name || !email || !password || !passwordConfirm) {
+      throw new AppError('Please provide name, email, password, and password confirmation', 400);
+    }
+
+    // Validate password match
+    if (password !== passwordConfirm) {
+      throw new AppError('Passwords do not match', 400);
+    }
+
+    // Check if admin already exists
+    const existingAdmin = await User.findOne({ email, role: 'admin' });
+    if (existingAdmin) {
+      throw new AppError('An admin account with this email already exists', 400);
+    }
+
+    // Create admin user
+    const admin = await User.create({
+      name,
+      email,
+      password,
+      passwordConfirm,
+      role: 'admin',
+      isEmailVerified: true,
+      isActive: true,
+    });
+
+    logger.info(`New admin created: ${email}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Admin account created successfully',
+      data: {
+        admin: {
+          _id: admin._id,
+          name: admin.name,
+          email: admin.email,
+          role: admin.role,
+        },
+      },
+    });
+  }
+);
