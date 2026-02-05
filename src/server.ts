@@ -26,22 +26,41 @@ process.on('uncaughtException', (err: Error) => {
 // Vercel Serverless Support
 // ============================================
 
-// Connect to database for serverless environment
+import mongoose from 'mongoose';
+
+// MongoDB connection state for serverless
 let isConnected = false;
 
-const connectDB = async () => {
-  if (isConnected) return;
-  await connectDatabase();
-  isConnected = true;
+const ensureDbConnection = async () => {
+  if (isConnected && mongoose.connection.readyState === 1) {
+    return;
+  }
+  
+  try {
+    await connectDatabase();
+    isConnected = true;
+    logger.info('Database connected in serverless environment');
+  } catch (error) {
+    logger.error('Database connection failed:', error);
+    throw error;
+  }
 };
 
-// Connect on module load for serverless
-connectDB().catch((err) => {
-  logger.error('Failed to connect to database:', err);
-});
+// Wrap the app to ensure DB connection
+const handler = async (req: any, res: any) => {
+  try {
+    await ensureDbConnection();
+    return app(req, res);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Database connection failed',
+    });
+  }
+};
 
-// Export for Vercel serverless functions
-export default app;
+// Export handler for Vercel serverless functions
+export default handler;
 
 // ============================================
 // Local Development Server

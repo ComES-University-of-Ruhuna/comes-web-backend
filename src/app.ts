@@ -90,8 +90,7 @@ const corsOptions: cors.CorsOptions = {
   maxAge: 86400, // 24 hours
 };
 
-// Handle preflight requests
-app.options('*', cors(corsOptions));
+// Handle preflight requests and apply CORS
 app.use(cors(corsOptions));
 
 // Rate limiting
@@ -156,7 +155,7 @@ app.use(hpp({
 }));
 
 // Compression
-app.use(compression());
+app.use(compression() as unknown as express.RequestHandler);
 
 // ============================================
 // Logging
