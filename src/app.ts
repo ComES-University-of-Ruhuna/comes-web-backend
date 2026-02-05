@@ -58,10 +58,26 @@ const corsOptions: cors.CorsOptions = {
       config.frontendUrl,
       'http://localhost:3000',
       'http://localhost:5173',
+      'https://comes-web-frontend.vercel.app',
+      // Allow all Vercel preview deployments
+      /^https:\/\/comes-web-frontend.*\.vercel\.app$/,
     ];
     
     // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    
+    // Check if origin matches any allowed origin (string or regex)
+    const isAllowed = allowedOrigins.some((allowed) => {
+      if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return allowed === origin;
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -74,6 +90,8 @@ const corsOptions: cors.CorsOptions = {
   maxAge: 86400, // 24 hours
 };
 
+// Handle preflight requests
+app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
 // Rate limiting
