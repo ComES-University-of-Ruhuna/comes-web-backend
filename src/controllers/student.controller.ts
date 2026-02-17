@@ -585,3 +585,90 @@ export const sendNotificationToStudent = asyncHandler(
     });
   }
 );
+
+/**
+ * @desc    Send notification to all students
+ * @route   POST /api/v1/students/notify-all
+ * @access  Private (Admin)
+ */
+export const sendNotificationToAllStudents = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const { subject, message } = req.body;
+
+    if (!subject || !message) {
+      throw new AppError('Subject and message are required', 400);
+    }
+
+    const students = await Student.find().select('name email');
+
+    if (students.length === 0) {
+      throw new AppError('No students found to notify', 404);
+    }
+
+    let sentCount = 0;
+    const failedEmails: string[] = [];
+
+    // Send emails in batches to avoid overwhelming the email service
+    const batchSize = 10;
+    for (let i = 0; i < students.length; i += batchSize) {
+      const batch = students.slice(i, i + batchSize);
+      const emailPromises = batch.map(async (student) => {
+        try {
+          await sendEmail({
+            to: student.email,
+            subject: subject,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                  <h1 style="color: white; margin: 0; font-size: 28px;">ComES - University of Ruhuna</h1>
+                </div>
+                
+                <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
+                  <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                    Dear <strong>${student.name}</strong>,
+                  </p>
+                  
+                  <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3B82F6;">
+                    <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0;">
+                      ${message.split('\n').join('<br>')}
+                    </p>
+                  </div>
+                  
+                  <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 30px;">
+                    Best regards,<br>
+                    <strong>ComES Team</strong><br>
+                    University of Ruhuna
+                  </p>
+                  
+                  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+                  
+                  <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+                    This is an automated notification from ComES. Please do not reply to this email.
+                  </p>
+                </div>
+              </div>
+            `,
+          });
+          sentCount++;
+        } catch (err) {
+          failedEmails.push(student.email);
+          logger.error(`Failed to send notification to ${student.email}: ${err}`);
+        }
+      });
+
+      await Promise.all(emailPromises);
+    }
+
+    logger.info(`Broadcast notification sent: ${sentCount}/${students.length} successful. Subject: ${subject}`);
+
+    res.status(200).json({
+      success: true,
+      message: `Notification sent to ${sentCount} out of ${students.length} students`,
+      data: {
+        sentCount,
+        totalStudents: students.length,
+        failedEmails: failedEmails.length > 0 ? failedEmails : undefined,
+      },
+    });
+  }
+);
