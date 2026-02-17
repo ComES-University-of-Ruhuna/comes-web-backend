@@ -65,6 +65,12 @@ router.post('/login', validate(studentValidation.login), login);
 router.get('/verify-email/:token', verifyEmail);
 router.get('/portfolio/:username', getStudentPortfolio);
 
+// Admin routes (must be before protectStudent middleware)
+router.get('/', protect, restrictTo('admin'), getAllStudents);
+router.delete('/:id', protect, restrictTo('admin'), deleteStudentByAdmin);
+router.post('/notify', protect, restrictTo('admin'), sendNotificationToStudent);
+router.post('/notify-all', protect, restrictTo('admin'), sendNotificationToAllStudents);
+
 // Student authenticated routes
 router.use(protectStudent);
 
@@ -76,11 +82,5 @@ router.get('/my-events', getMyEvents);
 router.post('/events/:eventId/register', registerForEvent);
 router.delete('/events/:eventId/unregister', unregisterFromEvent);
 router.get('/search', searchStudents);
-
-// Admin routes
-router.get('/', protect, restrictTo('admin'), getAllStudents);
-router.delete('/:id', protect, restrictTo('admin'), deleteStudentByAdmin);
-router.post('/notify', protect, restrictTo('admin'), sendNotificationToStudent);
-router.post('/notify-all', protect, restrictTo('admin'), sendNotificationToAllStudents);
 
 export default router;

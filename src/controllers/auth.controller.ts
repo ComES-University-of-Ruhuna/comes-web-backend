@@ -165,7 +165,7 @@ export const logout = asyncHandler(
  */
 export const refreshToken = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { refreshToken } = req.cookies || req.body;
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
 
     if (!refreshToken) {
       throw new AuthenticationError('No refresh token provided');
