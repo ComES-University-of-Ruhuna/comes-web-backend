@@ -171,6 +171,93 @@ export const deleteSubscriber = asyncHandler(
 );
 
 /**
+ * @desc    Send newsletter to all active subscribers
+ * @route   POST /api/v1/newsletter/send
+ * @access  Private/Admin
+ */
+export const sendNewsletter = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { subject, message } = req.body;
+
+    if (!subject || !message) {
+      throw new AppError('Subject and message are required', 400);
+    }
+
+    const subscribers = await Newsletter.find({ isSubscribed: true }).select('email name');
+
+    if (subscribers.length === 0) {
+      throw new AppError('No active subscribers found', 404);
+    }
+
+    let sentCount = 0;
+    const failedEmails: string[] = [];
+
+    // Send emails in batches to avoid overwhelming the email service
+    const batchSize = 10;
+    for (let i = 0; i < subscribers.length; i += batchSize) {
+      const batch = subscribers.slice(i, i + batchSize);
+      const emailPromises = batch.map(async (subscriber) => {
+        try {
+          await sendEmail({
+            to: subscriber.email,
+            subject,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #003366 0%, #0066cc 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                  <h1 style="color: white; margin: 0; font-size: 28px;">ComES Newsletter</h1>
+                  <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0; font-size: 14px;">Computer Engineering Society - University of Ruhuna</p>
+                </div>
+                
+                <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
+                  ${subscriber.name ? `<p style="color: #374151; font-size: 16px; line-height: 1.6;">Dear <strong>${subscriber.name}</strong>,</p>` : ''}
+                  
+                  <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #003366;">
+                    <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0;">
+                      ${message.split('\n').join('<br>')}
+                    </p>
+                  </div>
+                  
+                  <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 30px;">
+                    Best regards,<br>
+                    <strong>ComES Team</strong><br>
+                    University of Ruhuna
+                  </p>
+                  
+                  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+                  
+                  <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+                    You received this email because you subscribed to the ComES newsletter.<br>
+                    To unsubscribe, please visit our website.
+                  </p>
+                </div>
+              </div>
+            `,
+          });
+          sentCount++;
+        } catch (err) {
+          failedEmails.push(subscriber.email);
+          logger.error(`Failed to send newsletter to ${subscriber.email}: ${err}`);
+        }
+      });
+
+      await Promise.all(emailPromises);
+    }
+
+    logger.info(`Newsletter sent: ${sentCount}/${subscribers.length} successful. Subject: ${subject}`);
+
+    res.status(200).json({
+      success: true,
+      message: `Newsletter sent to ${sentCount} out of ${subscribers.length} subscribers`,
+      data: {
+        sentCount,
+        totalSubscribers: subscribers.length,
+        failedEmails: failedEmails.length > 0 ? failedEmails : undefined,
+      },
+    });
+  }
+);
+
+/**
  * @desc    Export subscribers as CSV (admin)
  * @route   GET /api/v1/newsletter/export
  * @access  Private/Admin

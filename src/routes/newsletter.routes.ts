@@ -9,6 +9,7 @@ import {
   getAllSubscribers,
   deleteSubscriber,
   exportSubscribers,
+  sendNewsletter,
 } from '../controllers/newsletter.controller';
 import { protect, restrictTo } from '../middleware/auth.middleware';
 import { validate, newsletterValidations, commonValidations } from '../middleware/validation.middleware';
@@ -24,6 +25,7 @@ router.use(protect, restrictTo('admin'));
 
 router.get('/', getAllSubscribers);
 router.get('/export', exportSubscribers);
+router.post('/send', sendNewsletter);
 router.delete('/:id', validate(commonValidations.mongoId('id')), deleteSubscriber);
 
 export default router;
