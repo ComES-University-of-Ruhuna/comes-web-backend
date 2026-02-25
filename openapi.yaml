@@ -1,0 +1,1840 @@
+openapi: 3.0.3
+info:
+  title: ComES Web Backend API
+  description: REST API for the Computer Engineering Students' Society (ComES) at the University of Ruhuna.
+  version: 1.0.0
+  contact:
+    name: ComES Dev Team
+
+servers:
+  - url: https://comes-web-backend.vercel.app/api/v1
+    description: Production
+  - url: http://localhost:5000/api/v1
+    description: Local Development
+
+tags:
+  - name: Health
+  - name: Auth
+  - name: Users
+  - name: Events
+  - name: Blog
+  - name: Projects
+  - name: Contact
+  - name: Newsletter
+  - name: Team
+  - name: Students
+  - name: Competition Teams
+  - name: Analytics
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ── Shared ──────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+
+    SuccessResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string }
+
+    PaginationMeta:
+      type: object
+      properties:
+        total: { type: integer }
+        page:  { type: integer }
+        limit: { type: integer }
+        pages: { type: integer }
+
+    # ── User ────────────────────────────────────────────
+    User:
+      type: object
+      properties:
+        _id:             { type: string, example: "64abc..." }
+        name:            { type: string }
+        email:           { type: string, format: email }
+        role:            { type: string, enum: [user, member, admin] }
+        studentId:       { type: string, example: "EG/2020/1234" }
+        avatar:          { type: string }
+        bio:             { type: string }
+        linkedin:        { type: string }
+        github:          { type: string }
+        isEmailVerified: { type: boolean }
+        createdAt:       { type: string, format: date-time }
+        updatedAt:       { type: string, format: date-time }
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password, passwordConfirm]
+      properties:
+        name:            { type: string, minLength: 2, maxLength: 100 }
+        email:           { type: string, format: email }
+        password:        { type: string, minLength: 8 }
+        passwordConfirm: { type: string }
+        studentId:       { type: string }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:    { type: string, format: email }
+        password: { type: string }
+
+    AuthResponse:
+      type: object
+      properties:
+        success:      { type: boolean }
+        token:        { type: string }
+        refreshToken: { type: string }
+        data:
+          type: object
+          properties:
+            user: { $ref: '#/components/schemas/User' }
+
+    # ── Event ───────────────────────────────────────────
+    Event:
+      type: object
+      properties:
+        _id:              { type: string }
+        title:            { type: string }
+        slug:             { type: string }
+        description:      { type: string }
+        shortDescription: { type: string }
+        date:             { type: string, format: date-time }
+        endDate:          { type: string, format: date-time }
+        location:         { type: string }
+        type:             { type: string, enum: [workshop, hackathon, seminar, competition, social, other] }
+        status:           { type: string, enum: [upcoming, ongoing, completed, cancelled] }
+        image:            { type: string }
+        icon:             { type: string }
+        maxParticipants:  { type: integer }
+        registeredCount:  { type: integer }
+        tags:             { type: array, items: { type: string } }
+        isFeatured:       { type: boolean }
+        isRegistrationOpen: { type: boolean, readOnly: true }
+        availableSpots:   { type: integer, readOnly: true }
+        createdAt:        { type: string, format: date-time }
+        updatedAt:        { type: string, format: date-time }
+
+    CreateEventRequest:
+      type: object
+      required: [title, description, date, location]
+      properties:
+        title:            { type: string, minLength: 3, maxLength: 200 }
+        description:      { type: string, minLength: 10, maxLength: 5000 }
+        shortDescription: { type: string, maxLength: 300 }
+        date:             { type: string, format: date-time }
+        endDate:          { type: string, format: date-time }
+        location:         { type: string }
+        type:             { type: string, enum: [workshop, hackathon, seminar, competition, social, other] }
+        status:           { type: string, enum: [upcoming, ongoing, completed, cancelled] }
+        image:            { type: string }
+        icon:             { type: string }
+        maxParticipants:  { type: integer }
+        tags:             { type: array, items: { type: string } }
+        isFeatured:       { type: boolean }
+
+    # ── Blog ────────────────────────────────────────────
+    BlogPost:
+      type: object
+      properties:
+        _id:         { type: string }
+        title:       { type: string }
+        slug:        { type: string }
+        content:     { type: string }
+        excerpt:     { type: string }
+        coverImage:  { type: string }
+        category:    { type: string }
+        tags:        { type: array, items: { type: string } }
+        author:      { type: string, description: "User ObjectId" }
+        status:      { type: string, enum: [draft, published, archived] }
+        publishedAt: { type: string, format: date-time }
+        isFeatured:  { type: boolean }
+        views:       { type: integer }
+        likes:       { type: integer }
+        readTime:    { type: integer }
+        createdAt:   { type: string, format: date-time }
+        updatedAt:   { type: string, format: date-time }
+
+    CreateBlogRequest:
+      type: object
+      required: [title, content, category]
+      properties:
+        title:      { type: string, minLength: 3, maxLength: 200 }
+        content:    { type: string, minLength: 50 }
+        excerpt:    { type: string, maxLength: 500 }
+        coverImage: { type: string }
+        category:   { type: string }
+        tags:       { type: array, items: { type: string } }
+        status:     { type: string, enum: [draft, published, archived] }
+        isFeatured: { type: boolean }
+
+    # ── Project ─────────────────────────────────────────
+    Project:
+      type: object
+      properties:
+        _id:              { type: string }
+        title:            { type: string }
+        slug:             { type: string }
+        description:      { type: string }
+        shortDescription: { type: string }
+        category:         { type: string }
+        technologies:     { type: array, items: { type: string } }
+        image:            { type: string }
+        images:           { type: array, items: { type: string } }
+        demoUrl:          { type: string }
+        githubUrl:        { type: string }
+        status:           { type: string, enum: [in-progress, completed, archived] }
+        team:             { type: array, items: { type: string } }
+        teamLead:         { type: string }
+        startDate:        { type: string, format: date-time }
+        endDate:          { type: string, format: date-time }
+        isFeatured:       { type: boolean }
+        likes:            { type: integer }
+        views:            { type: integer }
+        createdAt:        { type: string, format: date-time }
+        updatedAt:        { type: string, format: date-time }
+
+    CreateProjectRequest:
+      type: object
+      required: [title, description, category, technologies]
+      properties:
+        title:            { type: string, minLength: 3, maxLength: 200 }
+        description:      { type: string, minLength: 10 }
+        shortDescription: { type: string, maxLength: 300 }
+        category:         { type: string }
+        technologies:     { type: array, items: { type: string } }
+        image:            { type: string }
+        images:           { type: array, items: { type: string } }
+        demoUrl:          { type: string }
+        githubUrl:        { type: string }
+        status:           { type: string, enum: [in-progress, completed, archived] }
+        team:             { type: array, items: { type: string } }
+        teamLead:         { type: string }
+        startDate:        { type: string, format: date-time }
+        endDate:          { type: string, format: date-time }
+        isFeatured:       { type: boolean }
+
+    # ── Contact ─────────────────────────────────────────
+    Contact:
+      type: object
+      properties:
+        _id:          { type: string }
+        name:         { type: string }
+        email:        { type: string, format: email }
+        subject:      { type: string }
+        message:      { type: string }
+        status:       { type: string, enum: [new, read, replied, archived] }
+        repliedAt:    { type: string, format: date-time }
+        replyMessage: { type: string }
+        createdAt:    { type: string, format: date-time }
+        updatedAt:    { type: string, format: date-time }
+
+    SubmitContactRequest:
+      type: object
+      required: [name, email, subject, message]
+      properties:
+        name:    { type: string, minLength: 2, maxLength: 100 }
+        email:   { type: string, format: email }
+        subject: { type: string, minLength: 3, maxLength: 200 }
+        message: { type: string, minLength: 10, maxLength: 5000 }
+
+    # ── Newsletter ──────────────────────────────────────
+    NewsletterSubscriber:
+      type: object
+      properties:
+        _id:          { type: string }
+        email:        { type: string, format: email }
+        name:         { type: string }
+        isSubscribed: { type: boolean }
+        isConfirmed:  { type: boolean }
+        subscribedAt: { type: string, format: date-time }
+        createdAt:    { type: string, format: date-time }
+
+    # ── Team Member ─────────────────────────────────────
+    TeamMember:
+      type: object
+      properties:
+        _id:        { type: string }
+        name:       { type: string }
+        email:      { type: string, format: email }
+        role:       { type: string }
+        department: { type: string, enum: [executive, technical, creative, marketing, events, finance, advisory] }
+        batch:      { type: string }
+        avatar:     { type: string }
+        bio:        { type: string }
+        linkedin:   { type: string }
+        github:     { type: string }
+        twitter:    { type: string }
+        order:      { type: integer }
+        isActive:   { type: boolean }
+        term:
+          type: object
+          properties:
+            start: { type: string, format: date-time }
+            end:   { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CreateTeamMemberRequest:
+      type: object
+      required: [name, role, department, batch, term]
+      properties:
+        name:       { type: string, minLength: 2, maxLength: 100 }
+        email:      { type: string, format: email }
+        role:       { type: string }
+        department: { type: string, enum: [executive, technical, creative, marketing, events, finance, advisory] }
+        batch:      { type: string }
+        avatar:     { type: string }
+        bio:        { type: string }
+        linkedin:   { type: string }
+        github:     { type: string }
+        twitter:    { type: string }
+        order:      { type: integer }
+        term:
+          type: object
+          required: [start]
+          properties:
+            start: { type: string, format: date-time }
+            end:   { type: string, format: date-time }
+
+    # ── Student ─────────────────────────────────────────
+    Student:
+      type: object
+      properties:
+        _id:             { type: string }
+        name:            { type: string }
+        email:           { type: string, format: email }
+        username:        { type: string }
+        registrationNo:  { type: string, example: "EG/2024/1234" }
+        batch:           { type: string }
+        semester:        { type: integer, minimum: 1, maximum: 8 }
+        contactNo:       { type: string }
+        avatar:          { type: string }
+        bio:             { type: string }
+        skills:          { type: array, items: { type: string } }
+        github:          { type: string }
+        linkedin:        { type: string }
+        website:         { type: string }
+        isEmailVerified: { type: boolean }
+        registeredEvents:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    StudentRegisterRequest:
+      type: object
+      required: [name, email, password, passwordConfirm, registrationNo]
+      properties:
+        name:            { type: string, minLength: 2, maxLength: 100 }
+        email:           { type: string, format: email }
+        password:        { type: string, minLength: 8 }
+        passwordConfirm: { type: string }
+        registrationNo:  { type: string, example: "EG/2024/1234" }
+
+    StudentLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:    { type: string, format: email }
+        password: { type: string }
+
+    # ── Competition Team ────────────────────────────────
+    CompetitionTeamMember:
+      type: object
+      properties:
+        studentId:      { type: string }
+        name:           { type: string }
+        email:          { type: string, format: email }
+        registrationNo: { type: string }
+        status:         { type: string, enum: [pending, approved, rejected] }
+        joinedAt:       { type: string, format: date-time }
+
+    CompetitionTeam:
+      type: object
+      properties:
+        _id:         { type: string }
+        name:        { type: string }
+        leaderId:    { type: string }
+        leaderName:  { type: string }
+        leaderEmail: { type: string, format: email }
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/CompetitionTeamMember' }
+        status:    { type: string, enum: [pending, active, disbanded] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    # ── Analytics ───────────────────────────────────────
+    PageView:
+      type: object
+      properties:
+        path:      { type: string }
+        title:     { type: string }
+        timestamp: { type: string, format: date-time }
+        duration:  { type: integer }
+
+    TrackVisitRequest:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:        { type: string }
+        userAgent:        { type: string }
+        screenResolution: { type: string }
+        language:         { type: string }
+        referrer:         { type: string }
+        device:           { type: string, enum: [desktop, mobile, tablet] }
+
+    TrackPageViewRequest:
+      type: object
+      required: [sessionId, path, title]
+      properties:
+        sessionId: { type: string }
+        path:      { type: string }
+        title:     { type: string }
+        duration:  { type: integer }
+
+# ════════════════════════════════════════════════════════
+# PATHS
+# ════════════════════════════════════════════════════════
+paths:
+
+  # ── Health ───────────────────────────────────────────
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        '200':
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:     { type: boolean }
+                  message:     { type: string }
+                  timestamp:   { type: string, format: date-time }
+                  environment: { type: string }
+                  version:     { type: string }
+
+  # ── Auth ─────────────────────────────────────────────
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401':
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      responses:
+        '200':
+          description: Logged out
+
+  /auth/refresh-token:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: New access token issued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request a password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Reset email sent
+
+  /auth/reset-password/{token}:
+    patch:
+      tags: [Auth]
+      summary: Reset password using token
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password, passwordConfirm]
+              properties:
+                password:        { type: string, minLength: 8 }
+                passwordConfirm: { type: string }
+      responses:
+        '200':
+          description: Password reset successful
+
+  /auth/update-password:
+    patch:
+      tags: [Auth]
+      summary: Update current password (authenticated)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [passwordCurrent, password, passwordConfirm]
+              properties:
+                passwordCurrent: { type: string }
+                password:        { type: string, minLength: 8 }
+                passwordConfirm: { type: string }
+      responses:
+        '200':
+          description: Password updated
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      user: { $ref: '#/components/schemas/User' }
+
+  /auth/create-admin:
+    post:
+      tags: [Auth]
+      summary: Create an admin user (setup only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Admin created
+
+  # ── Users ────────────────────────────────────────────
+  /users/me:
+    patch:
+      tags: [Users]
+      summary: Update own profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:     { type: string }
+                bio:      { type: string }
+                avatar:   { type: string }
+                linkedin: { type: string }
+                github:   { type: string }
+      responses:
+        '200':
+          description: Profile updated
+    delete:
+      tags: [Users]
+      summary: Deactivate own account
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Account deactivated
+
+  /users:
+    get:
+      tags: [Users]
+      summary: Get all users (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      users:
+                        type: array
+                        items: { $ref: '#/components/schemas/User' }
+                      pagination: { $ref: '#/components/schemas/PaginationMeta' }
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get a user by ID (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: User found
+    patch:
+      tags: [Users]
+      summary: Update a user (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:  { type: string }
+                role:  { type: string, enum: [user, member, admin] }
+                bio:   { type: string }
+      responses:
+        '200':
+          description: User updated
+    delete:
+      tags: [Users]
+      summary: Delete a user (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: User deleted
+
+  # ── Events ───────────────────────────────────────────
+  /events:
+    get:
+      tags: [Events]
+      summary: Get all events
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: status
+          in: query
+          schema: { type: string, enum: [upcoming, ongoing, completed, cancelled] }
+        - name: type
+          in: query
+          schema: { type: string, enum: [workshop, hackathon, seminar, competition, social, other] }
+      responses:
+        '200':
+          description: List of events
+    post:
+      tags: [Events]
+      summary: Create an event (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateEventRequest' }
+      responses:
+        '201':
+          description: Event created
+
+  /events/featured:
+    get:
+      tags: [Events]
+      summary: Get featured events
+      responses:
+        '200':
+          description: Featured events list
+
+  /events/slug/{slug}:
+    get:
+      tags: [Events]
+      summary: Get an event by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Event found
+
+  /events/{id}:
+    get:
+      tags: [Events]
+      summary: Get an event by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Event found
+    patch:
+      tags: [Events]
+      summary: Update an event (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateEventRequest' }
+      responses:
+        '200':
+          description: Event updated
+    delete:
+      tags: [Events]
+      summary: Delete an event (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Event deleted
+
+  /events/{id}/register:
+    post:
+      tags: [Events]
+      summary: Register for an event (authenticated user)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Registered successfully
+    delete:
+      tags: [Events]
+      summary: Unregister from an event (authenticated user)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Unregistered successfully
+
+  # ── Blog ─────────────────────────────────────────────
+  /blog:
+    get:
+      tags: [Blog]
+      summary: Get all blog posts
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, published, archived] }
+      responses:
+        '200':
+          description: List of blog posts
+    post:
+      tags: [Blog]
+      summary: Create a blog post (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBlogRequest' }
+      responses:
+        '201':
+          description: Post created
+
+  /blog/featured:
+    get:
+      tags: [Blog]
+      summary: Get featured blog posts
+      responses:
+        '200':
+          description: Featured posts
+
+  /blog/categories:
+    get:
+      tags: [Blog]
+      summary: Get all blog categories
+      responses:
+        '200':
+          description: Categories list
+
+  /blog/tags:
+    get:
+      tags: [Blog]
+      summary: Get all blog tags
+      responses:
+        '200':
+          description: Tags list
+
+  /blog/slug/{slug}:
+    get:
+      tags: [Blog]
+      summary: Get a post by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Post found
+
+  /blog/{id}:
+    get:
+      tags: [Blog]
+      summary: Get a post by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Post found
+    patch:
+      tags: [Blog]
+      summary: Update a post (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBlogRequest' }
+      responses:
+        '200':
+          description: Post updated
+    delete:
+      tags: [Blog]
+      summary: Delete a post (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Post deleted
+
+  /blog/{id}/like:
+    post:
+      tags: [Blog]
+      summary: Like a blog post
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Like toggled
+
+  # ── Projects ─────────────────────────────────────────
+  /projects:
+    get:
+      tags: [Projects]
+      summary: Get all projects
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [in-progress, completed, archived] }
+      responses:
+        '200':
+          description: List of projects
+    post:
+      tags: [Projects]
+      summary: Create a project (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateProjectRequest' }
+      responses:
+        '201':
+          description: Project created
+
+  /projects/featured:
+    get:
+      tags: [Projects]
+      summary: Get featured projects
+      responses:
+        '200':
+          description: Featured projects
+
+  /projects/categories:
+    get:
+      tags: [Projects]
+      summary: Get all project categories
+      responses:
+        '200':
+          description: Categories list
+
+  /projects/slug/{slug}:
+    get:
+      tags: [Projects]
+      summary: Get a project by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Project found
+
+  /projects/{id}:
+    get:
+      tags: [Projects]
+      summary: Get a project by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Project found
+    patch:
+      tags: [Projects]
+      summary: Update a project (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateProjectRequest' }
+      responses:
+        '200':
+          description: Project updated
+    delete:
+      tags: [Projects]
+      summary: Delete a project (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Project deleted
+
+  /projects/{id}/like:
+    post:
+      tags: [Projects]
+      summary: Like a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Like toggled
+
+  # ── Contact ──────────────────────────────────────────
+  /contact:
+    post:
+      tags: [Contact]
+      summary: Submit a contact message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubmitContactRequest' }
+      responses:
+        '201':
+          description: Message submitted
+    get:
+      tags: [Contact]
+      summary: Get all contact messages (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: status
+          in: query
+          schema: { type: string, enum: [new, read, replied, archived] }
+      responses:
+        '200':
+          description: List of contact messages
+
+  /contact/{id}:
+    get:
+      tags: [Contact]
+      summary: Get a contact message (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Contact message
+    patch:
+      tags: [Contact]
+      summary: Update contact message status (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [new, read, replied, archived] }
+      responses:
+        '200':
+          description: Status updated
+    delete:
+      tags: [Contact]
+      summary: Delete a contact message (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted
+
+  /contact/{id}/reply:
+    post:
+      tags: [Contact]
+      summary: Reply to a contact message (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string, minLength: 10 }
+      responses:
+        '200':
+          description: Reply sent
+
+  # ── Newsletter ───────────────────────────────────────
+  /newsletter/subscribe:
+    post:
+      tags: [Newsletter]
+      summary: Subscribe to newsletter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+                name:  { type: string }
+      responses:
+        '201':
+          description: Subscribed
+
+  /newsletter/unsubscribe:
+    post:
+      tags: [Newsletter]
+      summary: Unsubscribe from newsletter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Unsubscribed
+
+  /newsletter:
+    get:
+      tags: [Newsletter]
+      summary: Get all subscribers (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of subscribers
+
+  /newsletter/export:
+    get:
+      tags: [Newsletter]
+      summary: Export subscribers as CSV (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /newsletter/send:
+    post:
+      tags: [Newsletter]
+      summary: Send newsletter to all subscribers (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, content]
+              properties:
+                subject: { type: string }
+                content: { type: string }
+      responses:
+        '200':
+          description: Newsletter sent
+
+  /newsletter/{id}:
+    delete:
+      tags: [Newsletter]
+      summary: Delete a subscriber (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted
+
+  # ── Team ─────────────────────────────────────────────
+  /team:
+    get:
+      tags: [Team]
+      summary: Get all team members
+      parameters:
+        - name: isActive
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: List of team members
+    post:
+      tags: [Team]
+      summary: Create a team member (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTeamMemberRequest' }
+      responses:
+        '201':
+          description: Member created
+
+  /team/department/{department}:
+    get:
+      tags: [Team]
+      summary: Get team members by department
+      parameters:
+        - name: department
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [executive, technical, creative, marketing, events, finance, advisory]
+      responses:
+        '200':
+          description: Members in department
+
+  /team/reorder:
+    patch:
+      tags: [Team]
+      summary: Reorder team members (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                members:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:    { type: string }
+                      order: { type: integer }
+      responses:
+        '200':
+          description: Reordered
+
+  /team/{id}:
+    get:
+      tags: [Team]
+      summary: Get a team member by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Member found
+    patch:
+      tags: [Team]
+      summary: Update a team member (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTeamMemberRequest' }
+      responses:
+        '200':
+          description: Member updated
+    delete:
+      tags: [Team]
+      summary: Delete a team member (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted
+
+  # ── Students ─────────────────────────────────────────
+  /students/register:
+    post:
+      tags: [Students]
+      summary: Register a new student account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StudentRegisterRequest' }
+      responses:
+        '201':
+          description: Student registered
+
+  /students/login:
+    post:
+      tags: [Students]
+      summary: Student login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StudentLoginRequest' }
+      responses:
+        '200':
+          description: Login successful
+
+  /students/verify-email/{token}:
+    get:
+      tags: [Students]
+      summary: Verify student email address
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Email verified
+
+  /students/portfolio/{username}:
+    get:
+      tags: [Students]
+      summary: Get a student's public portfolio
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Student portfolio
+
+  /students:
+    get:
+      tags: [Students]
+      summary: Get all students (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: List of students
+
+  /students/me:
+    get:
+      tags: [Students]
+      summary: Get own student profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Student profile
+    patch:
+      tags: [Students]
+      summary: Update own student profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:      { type: string }
+                username:  { type: string }
+                bio:       { type: string }
+                avatar:    { type: string }
+                semester:  { type: integer, minimum: 1, maximum: 8 }
+                contactNo: { type: string }
+                skills:    { type: array, items: { type: string } }
+                github:    { type: string }
+                linkedin:  { type: string }
+                website:   { type: string }
+      responses:
+        '200':
+          description: Profile updated
+    delete:
+      tags: [Students]
+      summary: Delete own student account
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Account deleted
+
+  /students/change-password:
+    post:
+      tags: [Students]
+      summary: Change student password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword:     { type: string, minLength: 8 }
+      responses:
+        '200':
+          description: Password changed
+
+  /students/my-events:
+    get:
+      tags: [Students]
+      summary: Get events the student is registered for
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of registered events
+
+  /students/events/{eventId}/register:
+    post:
+      tags: [Students]
+      summary: Register student for an event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Registered for event
+
+  /students/events/{eventId}/unregister:
+    delete:
+      tags: [Students]
+      summary: Unregister student from an event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Unregistered from event
+
+  /students/search:
+    get:
+      tags: [Students]
+      summary: Search students
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: batch
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Search results
+
+  /students/{id}:
+    delete:
+      tags: [Students]
+      summary: Delete a student by admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Student deleted
+
+  /students/notify:
+    post:
+      tags: [Students]
+      summary: Send notification to a specific student (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId, subject, message]
+              properties:
+                studentId: { type: string }
+                subject:   { type: string }
+                message:   { type: string }
+      responses:
+        '200':
+          description: Notification sent
+
+  /students/notify-all:
+    post:
+      tags: [Students]
+      summary: Send notification to all students (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, message]
+              properties:
+                subject: { type: string }
+                message: { type: string }
+      responses:
+        '200':
+          description: Notification sent to all
+
+  # ── Competition Teams ─────────────────────────────────
+  /competition-teams:
+    post:
+      tags: [Competition Teams]
+      summary: Create a competition team
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:    { type: string, minLength: 2, maxLength: 100 }
+                members:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      email:          { type: string, format: email }
+                      registrationNo: { type: string }
+      responses:
+        '201':
+          description: Team created
+
+  /competition-teams/my-teams:
+    get:
+      tags: [Competition Teams]
+      summary: Get current student's teams
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Student's teams
+
+  /competition-teams/invitations:
+    get:
+      tags: [Competition Teams]
+      summary: Get pending team invitations
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Pending invitations
+
+  /competition-teams/{id}:
+    get:
+      tags: [Competition Teams]
+      summary: Get a team by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Team found
+    delete:
+      tags: [Competition Teams]
+      summary: Disband a team (leader only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Team disbanded
+
+  /competition-teams/{id}/respond:
+    post:
+      tags: [Competition Teams]
+      summary: Respond to a team invitation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [approved, rejected] }
+      responses:
+        '200':
+          description: Response recorded
+
+  /competition-teams/{id}/leave:
+    post:
+      tags: [Competition Teams]
+      summary: Leave a team
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Left team
+
+  /competition-teams/{id}/members/{memberId}:
+    delete:
+      tags: [Competition Teams]
+      summary: Remove a member from a team (leader only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: memberId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Member removed
+
+  # ── Analytics ─────────────────────────────────────────
+  /analytics/visit:
+    post:
+      tags: [Analytics]
+      summary: Track a site visit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TrackVisitRequest' }
+      responses:
+        '200':
+          description: Visit tracked
+
+  /analytics/pageview:
+    post:
+      tags: [Analytics]
+      summary: Track a page view
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TrackPageViewRequest' }
+      responses:
+        '200':
+          description: Page view tracked
+
+  /analytics/summary:
+    get:
+      tags: [Analytics]
+      summary: Get analytics summary (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, default: 30 }
+      responses:
+        '200':
+          description: Analytics summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:       { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      totalVisitors:  { type: integer }
+                      totalPageViews: { type: integer }
+                      deviceBreakdown: { type: object }
+                      topPages:        { type: array, items: { type: object } }
+
+  /analytics/visitors:
+    get:
+      tags: [Analytics]
+      summary: Get visitor list (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: List of visitors
