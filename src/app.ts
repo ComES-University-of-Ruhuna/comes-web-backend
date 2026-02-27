@@ -59,6 +59,7 @@ const corsOptions: cors.CorsOptions = {
       'http://localhost:3000',
       'http://localhost:5173',
       'https://comes-web-frontend.vercel.app',
+      'https://comesuor.lk',
       // Allow all Vercel preview deployments
       /^https:\/\/comes-web-frontend.*\.vercel\.app$/,
     ];
