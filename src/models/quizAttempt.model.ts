@@ -19,6 +19,7 @@ export interface IQuestionResponse {
 export interface IQuizAttempt extends Document {
     _id: mongoose.Types.ObjectId;
     quizId: mongoose.Types.ObjectId;
+    studentId: mongoose.Types.ObjectId;
     participantName: string;
     responses: IQuestionResponse[];
     totalMarks: number;
@@ -74,6 +75,11 @@ const quizAttemptSchema = new Schema<IQuizAttempt>(
             ref: 'Quiz',
             required: [true, 'Quiz ID is required'],
         },
+        studentId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Student',
+            required: [true, 'Student ID is required'],
+        },
         participantName: {
             type: String,
             required: [true, 'Participant name is required'],
@@ -114,6 +120,7 @@ const quizAttemptSchema = new Schema<IQuizAttempt>(
 // ============================================
 
 quizAttemptSchema.index({ quizId: 1 });
+quizAttemptSchema.index({ studentId: 1 });
 quizAttemptSchema.index({ completedAt: -1 });
 quizAttemptSchema.index({ totalMarks: -1 });
 

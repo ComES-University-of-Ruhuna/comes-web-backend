@@ -13,42 +13,58 @@ import {
     submitQuizAttempt,
     getQuizAttempts,
 } from '../controllers/quiz.controller';
+import { protect, restrictTo, protectStudent } from '../middleware/auth.middleware';
 import { validate, quizValidations, commonValidations } from '../middleware/validation.middleware';
 
 const router = Router();
 
-// Quiz CRUD - All public (no auth)
+// Public routes - anyone can browse quizzes
 router.get('/', getAllQuizzes);
 router.get('/:id', validate(commonValidations.mongoId('id')), getQuizById);
-router.post('/', validate(quizValidations.create), createQuiz);
+
+// Admin only routes - quiz management
+router.post(
+    '/',
+    protect,
+    restrictTo('admin'),
+    validate(quizValidations.create),
+    createQuiz
+);
 router.patch(
     '/:id',
+    protect,
+    restrictTo('admin'),
     validate([...commonValidations.mongoId('id'), ...quizValidations.update]),
     updateQuiz
 );
 router.delete(
     '/:id',
+    protect,
+    restrictTo('admin'),
     validate(commonValidations.mongoId('id')),
     deleteQuiz
 );
-
-// Visibility toggle
 router.patch(
     '/:id/visibility',
+    protect,
+    restrictTo('admin'),
     validate([...commonValidations.mongoId('id'), ...quizValidations.toggleVisibility]),
     toggleVisibility
 );
-
-// Quiz attempts
-router.post(
-    '/:id/attempt',
-    validate([...commonValidations.mongoId('id'), ...quizValidations.submitAttempt]),
-    submitQuizAttempt
-);
 router.get(
     '/:id/attempts',
+    protect,
+    restrictTo('admin'),
     validate(commonValidations.mongoId('id')),
     getQuizAttempts
+);
+
+// Student only routes - quiz taking
+router.post(
+    '/:id/attempt',
+    protectStudent,
+    validate([...commonValidations.mongoId('id'), ...quizValidations.submitAttempt]),
+    submitQuizAttempt
 );
 
 export default router;

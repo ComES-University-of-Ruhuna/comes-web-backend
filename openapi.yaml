@@ -25,6 +25,8 @@ tags:
   - name: Students
   - name: Competition Teams
   - name: Analytics
+  - name: Quizzes
+  - name: Quiz Attempts
 
 components:
   securitySchemes:
@@ -32,6 +34,11 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    studentBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Student JWT token from /students/login
 
   schemas:
     # ── Shared ──────────────────────────────────────────
@@ -403,6 +410,108 @@ components:
         path:      { type: string }
         title:     { type: string }
         duration:  { type: integer }
+
+    # ── Quiz ────────────────────────────────────────────
+    Answer:
+      type: object
+      required: [text]
+      properties:
+        text:      { type: string, maxLength: 500 }
+        isCorrect: { type: boolean, default: false }
+
+    Question:
+      type: object
+      required: [questionText, answers, timeLimitSeconds, marks]
+      properties:
+        _id:              { type: string }
+        questionText:     { type: string, maxLength: 1000 }
+        imageUrl:         { type: string }
+        answers:
+          type: array
+          items: { $ref: '#/components/schemas/Answer' }
+          minItems: 4
+          maxItems: 4
+        timeLimitSeconds: { type: number, minimum: 5, maximum: 300 }
+        marks:            { type: number, minimum: 1 }
+
+    Quiz:
+      type: object
+      properties:
+        _id:         { type: string }
+        title:       { type: string }
+        slug:        { type: string, readOnly: true }
+        description: { type: string }
+        questions:
+          type: array
+          items: { $ref: '#/components/schemas/Question' }
+        totalMarks:  { type: number, readOnly: true }
+        isVisible:   { type: boolean }
+        createdAt:   { type: string, format: date-time }
+        updatedAt:   { type: string, format: date-time }
+
+    CreateQuizRequest:
+      type: object
+      required: [title, questions]
+      properties:
+        title:       { type: string, minLength: 3, maxLength: 200 }
+        description: { type: string, maxLength: 2000 }
+        questions:
+          type: array
+          items: { $ref: '#/components/schemas/Question' }
+          minItems: 1
+        isVisible:   { type: boolean, default: true }
+
+    UpdateQuizRequest:
+      type: object
+      properties:
+        title:       { type: string, minLength: 3, maxLength: 200 }
+        description: { type: string, maxLength: 2000 }
+        questions:
+          type: array
+          items: { $ref: '#/components/schemas/Question' }
+          minItems: 1
+        isVisible:   { type: boolean }
+
+    QuestionResponseItem:
+      type: object
+      required: [questionId, selectedAnswerIndex, responseTimeSeconds]
+      properties:
+        questionId:          { type: string }
+        selectedAnswerIndex: { type: integer, minimum: 0, maximum: 3 }
+        responseTimeSeconds: { type: number, minimum: 0 }
+        isCorrect:           { type: boolean, readOnly: true }
+        marksAwarded:        { type: number, readOnly: true }
+
+    QuizAttempt:
+      type: object
+      properties:
+        _id:             { type: string }
+        quizId:          { type: string }
+        studentId:       { type: string }
+        participantName: { type: string }
+        responses:
+          type: array
+          items: { $ref: '#/components/schemas/QuestionResponseItem' }
+        totalMarks:      { type: number }
+        maxMarks:        { type: number }
+        percentage:      { type: number }
+        completedAt:     { type: string, format: date-time }
+        createdAt:       { type: string, format: date-time }
+        updatedAt:       { type: string, format: date-time }
+
+    SubmitQuizAttemptRequest:
+      type: object
+      required: [responses]
+      properties:
+        responses:
+          type: array
+          items:
+            type: object
+            required: [questionId, selectedAnswerIndex, responseTimeSeconds]
+            properties:
+              questionId:          { type: string }
+              selectedAnswerIndex: { type: integer, minimum: 0, maximum: 3 }
+              responseTimeSeconds: { type: number, minimum: 0 }
 
 # ════════════════════════════════════════════════════════
 # PATHS
@@ -1838,3 +1947,293 @@ paths:
       responses:
         '200':
           description: List of visitors
+
+  # ── Quizzes ───────────────────────────────────────────
+  /quizzes:
+    get:
+      tags: [Quizzes]
+      summary: Get all visible quizzes
+      description: Returns paginated, searchable list of quizzes. Hidden quizzes are excluded unless includeHidden=true.
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: search
+          in: query
+          description: Search by title or description
+          schema: { type: string }
+        - name: includeHidden
+          in: query
+          description: Set to "true" to include hidden quizzes
+          schema: { type: string, enum: ['true', 'false'] }
+        - name: sort
+          in: query
+          description: Sort field (prefix with - for descending, e.g. -createdAt)
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated list of quizzes
+          headers:
+            X-Total-Count:
+              schema: { type: integer }
+              description: Total number of matching quizzes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      quizzes:
+                        type: array
+                        items: { $ref: '#/components/schemas/Quiz' }
+                      pagination: { $ref: '#/components/schemas/PaginationMeta' }
+    post:
+      tags: [Quizzes]
+      summary: Create a new quiz (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateQuizRequest' }
+      responses:
+        '201':
+          description: Quiz created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      quiz: { $ref: '#/components/schemas/Quiz' }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /quizzes/{id}:
+    get:
+      tags: [Quizzes]
+      summary: Get a quiz by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Quiz found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      quiz: { $ref: '#/components/schemas/Quiz' }
+        '404':
+          description: Quiz not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+    patch:
+      tags: [Quizzes]
+      summary: Update a quiz (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateQuizRequest' }
+      responses:
+        '200':
+          description: Quiz updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      quiz: { $ref: '#/components/schemas/Quiz' }
+        '404':
+          description: Quiz not found
+    delete:
+      tags: [Quizzes]
+      summary: Delete a quiz (admin)
+      description: Deletes the quiz and all associated attempts.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Quiz deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:    { type: 'null' }
+        '404':
+          description: Quiz not found
+
+  /quizzes/{id}/visibility:
+    patch:
+      tags: [Quizzes]
+      summary: Toggle quiz visibility (admin)
+      description: If isVisible is provided in the body it is set to that value; otherwise it toggles the current value.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isVisible: { type: boolean }
+      responses:
+        '200':
+          description: Visibility updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      quiz: { $ref: '#/components/schemas/Quiz' }
+        '404':
+          description: Quiz not found
+
+  /quizzes/{id}/attempt:
+    post:
+      tags: [Quiz Attempts]
+      summary: Submit a quiz attempt (student)
+      description: |
+        Submit answers for a quiz. Scoring is time-based:
+        - Wrong answer → 0 marks
+        - Correct answer → marks × (timeLimit − responseTime) / timeLimit
+        - Minimum 10% of question marks for any correct answer
+      security:
+        - studentBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubmitQuizAttemptRequest' }
+      responses:
+        '201':
+          description: Attempt submitted and scored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      attempt: { $ref: '#/components/schemas/QuizAttempt' }
+        '400':
+          description: Invalid responses or question not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '403':
+          description: Quiz is not available (hidden)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          description: Quiz not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /quizzes/{id}/attempts:
+    get:
+      tags: [Quiz Attempts]
+      summary: Get all attempts for a quiz (admin)
+      description: Returns paginated list of attempts, sorted by highest marks (default) or most recent.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: sort
+          in: query
+          description: Use "recent" to sort by most recent; default is by highest marks
+          schema: { type: string, enum: [recent] }
+      responses:
+        '200':
+          description: Paginated list of attempts
+          headers:
+            X-Total-Count:
+              schema: { type: integer }
+              description: Total number of attempts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      attempts:
+                        type: array
+                        items: { $ref: '#/components/schemas/QuizAttempt' }
+                      pagination: { $ref: '#/components/schemas/PaginationMeta' }
+        '404':
+          description: Quiz not found

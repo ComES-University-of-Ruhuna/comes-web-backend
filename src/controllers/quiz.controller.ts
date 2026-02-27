@@ -214,11 +214,15 @@ export const submitQuizAttempt = asyncHandler(
             throw new AppError('This quiz is not available', 403);
         }
 
-        const { participantName, responses } = req.body;
+        const { responses } = req.body;
 
         if (!responses || !Array.isArray(responses)) {
             throw new AppError('Responses are required', 400);
         }
+
+        // Use authenticated student info
+        const participantName = req.student!.name;
+        const studentId = req.student!._id;
 
         // Build a map of questions for quick lookup
         const questionMap = new Map(
@@ -273,6 +277,7 @@ export const submitQuizAttempt = asyncHandler(
         // Create the attempt
         const attempt = await QuizAttempt.create({
             quizId: quiz._id,
+            studentId,
             participantName,
             responses: scoredResponses,
             totalMarks: Math.round(totalMarks * 100) / 100,
