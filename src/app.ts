@@ -25,6 +25,7 @@ import teamRoutes from './routes/team.routes';
 import studentRoutes from './routes/student.routes';
 import competitionTeamRoutes from './routes/competitionTeam.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import quizRoutes from './routes/quiz.routes';
 
 // Import middleware
 import { errorHandler, notFound } from './middleware/error.middleware';
@@ -63,13 +64,13 @@ const corsOptions: cors.CorsOptions = {
       // Allow all Vercel preview deployments
       /^https:\/\/comes-web-frontend.*\.vercel\.app$/,
     ];
-    
+
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) {
       callback(null, true);
       return;
     }
-    
+
     // Check if origin matches any allowed origin (string or regex)
     const isAllowed = allowedOrigins.some((allowed) => {
       if (allowed instanceof RegExp) {
@@ -77,7 +78,7 @@ const corsOptions: cors.CorsOptions = {
       }
       return allowed === origin;
     });
-    
+
     if (isAllowed) {
       callback(null, true);
     } else {
@@ -205,6 +206,7 @@ app.use('/api/v1/team', teamRoutes);
 app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/competition-teams', competitionTeamRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/quizzes', quizRoutes);
 
 // ============================================
 // Error Handling

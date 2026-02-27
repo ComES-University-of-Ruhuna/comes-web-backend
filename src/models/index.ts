@@ -12,3 +12,5 @@ export { TeamMember, ITeamMember } from './team.model';
 export { Student, IStudent } from './student.model';
 export { CompetitionTeam, ICompetitionTeam, ICompetitionTeamMember } from './competitionTeam.model';
 export { Visitor, IVisitor, IPageView } from './analytics.model';
+export { Quiz, IQuiz, IQuestion, IAnswer } from './quiz.model';
+export { QuizAttempt, IQuizAttempt, IQuestionResponse } from './quizAttempt.model';

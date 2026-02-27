@@ -15,7 +15,7 @@ export const validate = (validations: ValidationChain[]) => {
     await Promise.all(validations.map((validation) => validation.run(req)));
 
     const errors = validationResult(req);
-    
+
     if (errors.isEmpty()) {
       return next();
     }
@@ -255,5 +255,133 @@ export const newsletterValidations = {
       .trim()
       .isLength({ min: 2, max: 100 })
       .withMessage('Name must be between 2 and 100 characters'),
+  ],
+};
+
+// ============================================
+// Quiz Validations
+// ============================================
+
+export const quizValidations = {
+  create: [
+    body('title')
+      .trim()
+      .isLength({ min: 3, max: 200 })
+      .withMessage('Title must be between 3 and 200 characters'),
+    body('description')
+      .optional()
+      .trim()
+      .isLength({ max: 2000 })
+      .withMessage('Description cannot exceed 2000 characters'),
+    body('questions')
+      .isArray({ min: 1 })
+      .withMessage('Quiz must have at least one question'),
+    body('questions.*.questionText')
+      .trim()
+      .notEmpty()
+      .withMessage('Question text is required')
+      .isLength({ max: 1000 })
+      .withMessage('Question text cannot exceed 1000 characters'),
+    body('questions.*.imageUrl')
+      .optional()
+      .trim()
+      .isURL()
+      .withMessage('Invalid image URL'),
+    body('questions.*.answers')
+      .isArray({ min: 4, max: 4 })
+      .withMessage('Each question must have exactly 4 answers'),
+    body('questions.*.answers.*.text')
+      .trim()
+      .notEmpty()
+      .withMessage('Answer text is required')
+      .isLength({ max: 500 })
+      .withMessage('Answer text cannot exceed 500 characters'),
+    body('questions.*.answers.*.isCorrect')
+      .isBoolean()
+      .withMessage('isCorrect must be a boolean'),
+    body('questions.*.timeLimitSeconds')
+      .isInt({ min: 5, max: 300 })
+      .withMessage('Time limit must be between 5 and 300 seconds'),
+    body('questions.*.marks')
+      .isInt({ min: 1 })
+      .withMessage('Marks must be at least 1'),
+  ],
+
+  update: [
+    body('title')
+      .optional()
+      .trim()
+      .isLength({ min: 3, max: 200 })
+      .withMessage('Title must be between 3 and 200 characters'),
+    body('description')
+      .optional()
+      .trim()
+      .isLength({ max: 2000 })
+      .withMessage('Description cannot exceed 2000 characters'),
+    body('questions')
+      .optional()
+      .isArray({ min: 1 })
+      .withMessage('Quiz must have at least one question'),
+    body('questions.*.questionText')
+      .optional()
+      .trim()
+      .notEmpty()
+      .withMessage('Question text is required')
+      .isLength({ max: 1000 })
+      .withMessage('Question text cannot exceed 1000 characters'),
+    body('questions.*.imageUrl')
+      .optional()
+      .trim()
+      .isURL()
+      .withMessage('Invalid image URL'),
+    body('questions.*.answers')
+      .optional()
+      .isArray({ min: 4, max: 4 })
+      .withMessage('Each question must have exactly 4 answers'),
+    body('questions.*.answers.*.text')
+      .optional()
+      .trim()
+      .notEmpty()
+      .withMessage('Answer text is required')
+      .isLength({ max: 500 })
+      .withMessage('Answer text cannot exceed 500 characters'),
+    body('questions.*.answers.*.isCorrect')
+      .optional()
+      .isBoolean()
+      .withMessage('isCorrect must be a boolean'),
+    body('questions.*.timeLimitSeconds')
+      .optional()
+      .isInt({ min: 5, max: 300 })
+      .withMessage('Time limit must be between 5 and 300 seconds'),
+    body('questions.*.marks')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Marks must be at least 1'),
+  ],
+
+  toggleVisibility: [
+    body('isVisible')
+      .optional()
+      .isBoolean()
+      .withMessage('isVisible must be a boolean'),
+  ],
+
+  submitAttempt: [
+    body('participantName')
+      .trim()
+      .isLength({ min: 2, max: 100 })
+      .withMessage('Participant name must be between 2 and 100 characters'),
+    body('responses')
+      .isArray({ min: 1 })
+      .withMessage('At least one response is required'),
+    body('responses.*.questionId')
+      .isMongoId()
+      .withMessage('Invalid question ID format'),
+    body('responses.*.selectedAnswerIndex')
+      .isInt({ min: 0, max: 3 })
+      .withMessage('Selected answer index must be between 0 and 3'),
+    body('responses.*.responseTimeSeconds')
+      .isFloat({ min: 0 })
+      .withMessage('Response time must be a non-negative number'),
   ],
 };
