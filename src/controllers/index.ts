@@ -13,3 +13,4 @@ export * as teamController from './team.controller';
 export * as studentController from './student.controller';
 export * as competitionTeamController from './competitionTeam.controller';
 export * as analyticsController from './analytics.controller';
+export * as quizController from './quiz.controller';

@@ -35,7 +35,7 @@ const ensureDbConnection = async () => {
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
-  
+
   try {
     await connectDatabase();
     isConnected = true;
@@ -72,7 +72,7 @@ if (process.env.VERCEL !== '1') {
     try {
       // Connect to MongoDB
       await connectDatabase();
-      
+
       // Start the server
       const server = app.listen(PORT, () => {
         logger.info(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
