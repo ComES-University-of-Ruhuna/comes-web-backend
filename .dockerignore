@@ -1,0 +1,63 @@
+# Dependencies
+node_modules
+
+# Build output (rebuilt in container)
+dist
+
+# Environment files (injected at runtime)
+.env
+.env.*
+
+# Git
+.git
+.gitignore
+
+# IDE / Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+README.md
+LICENSE
+CHANGELOG.md
+docs/
+
+# Tests & coverage
+coverage
+__tests__
+*.test.ts
+*.spec.ts
+jest.config.*
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Uploads (mounted as volume in production)
+uploads
+
+# Vercel config (not needed in Docker)
+vercel.json
+
+# OpenAPI spec (not needed at runtime)
+openapi.yaml
+
+# Misc
+*.tmp
+*.temp
+*.md
