@@ -37,11 +37,12 @@ const createSendToken = (
   const refreshToken = signRefreshToken(student._id.toString());
 
   // Cookie options
+  const isProduction = req.secure || req.headers['x-forwarded-proto'] === 'https';
   const cookieOptions = {
     expires: new Date(Date.now() + config.jwt.cookieExpiresIn * 24 * 60 * 60 * 1000),
     httpOnly: true,
-    secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
-    sameSite: 'lax' as const,
+    secure: isProduction,
+    sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
   };
 
   res.cookie('studentJwt', accessToken, cookieOptions);
@@ -128,6 +129,55 @@ export const login = asyncHandler(
 
     logger.info(`Student logged in: ${email}`);
     createSendToken(student, 200, req, res);
+  }
+);
+
+/**
+ * @desc    Refresh student access token
+ * @route   POST /api/v1/students/refresh-token
+ * @access  Public
+ */
+export const refreshStudentToken = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const token = req.cookies?.studentRefreshToken || req.body?.refreshToken;
+
+    if (!token) {
+      throw new AppError('No refresh token provided', 401);
+    }
+
+    try {
+      const decoded = jwt.verify(token, config.jwt.refreshSecret) as { id: string; type?: string };
+
+      if (decoded.type !== 'student') {
+        throw new AppError('Invalid token type', 401);
+      }
+
+      const student = await Student.findById(decoded.id);
+
+      if (!student) {
+        throw new AppError('Invalid refresh token', 401);
+      }
+
+      // Generate new access token
+      const newAccessToken = signToken(student._id.toString());
+
+      const isProduction = req.secure || req.headers['x-forwarded-proto'] === 'https';
+      res.cookie('studentJwt', newAccessToken, {
+        expires: new Date(Date.now() + config.jwt.cookieExpiresIn * 24 * 60 * 60 * 1000),
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          accessToken: newAccessToken,
+        },
+      });
+    } catch {
+      throw new AppError('Invalid or expired refresh token', 401);
+    }
   }
 );
 
