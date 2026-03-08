@@ -197,7 +197,8 @@ app.get('/api/v1/health', (req: Request, res: Response) => {
 // API routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/events', eventRoutes);
+app.use('/api/v1/events', eventRoutes)
+;
 app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/blog', blogRoutes);
 app.use('/api/v1/contact', contactRoutes);
