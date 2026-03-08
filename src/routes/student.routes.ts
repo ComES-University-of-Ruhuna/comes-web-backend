@@ -6,6 +6,7 @@ import { Router } from 'express';
 import {
   register,
   login,
+  refreshStudentToken,
   getProfile,
   updateProfile,
   verifyEmail,
@@ -62,6 +63,7 @@ const studentValidation = {
 // Public routes
 router.post('/register', validate(studentValidation.register), register);
 router.post('/login', validate(studentValidation.login), login);
+router.post('/refresh-token', refreshStudentToken);
 router.get('/verify-email/:token', verifyEmail);
 router.get('/portfolio/:username', getStudentPortfolio);
 

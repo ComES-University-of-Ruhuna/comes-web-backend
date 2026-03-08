@@ -154,7 +154,7 @@ app.use(hpp({
     'status',
     'type',
   ],
-}));
+}) as unknown as express.RequestHandler);
 
 // Compression
 app.use(compression() as unknown as express.RequestHandler);

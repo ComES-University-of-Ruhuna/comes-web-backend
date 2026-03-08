@@ -34,11 +34,12 @@ const createSendToken = (
   const refreshToken = signRefreshToken(user._id.toString());
 
   // Cookie options
+  const isProduction = req.secure || req.headers['x-forwarded-proto'] === 'https';
   const cookieOptions = {
     expires: new Date(Date.now() + config.jwt.cookieExpiresIn * 24 * 60 * 60 * 1000),
     httpOnly: true,
-    secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
-    sameSite: 'lax' as const,
+    secure: isProduction,
+    sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
   };
 
   // Set cookies
@@ -182,11 +183,12 @@ export const refreshToken = asyncHandler(
       // Generate new access token
       const newAccessToken = signToken(user._id.toString());
 
+      const isProduction = req.secure || req.headers['x-forwarded-proto'] === 'https';
       res.cookie('jwt', newAccessToken, {
         expires: new Date(Date.now() + config.jwt.cookieExpiresIn * 24 * 60 * 60 * 1000),
         httpOnly: true,
-        secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
-        sameSite: 'lax',
+        secure: isProduction,
+        sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
       });
 
       res.status(200).json({
