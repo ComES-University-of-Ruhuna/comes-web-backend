@@ -9,7 +9,7 @@ info:
 servers:
   - url: https://comes-web-backend.vercel.app/api/v1
     description: Production
-  - url: http://localhost:5000/api/v1
+  - url: http://localhost:5001/api/v1
     description: Local Development
 
 tags:
@@ -2102,7 +2102,7 @@ paths:
                 properties:
                   success: { type: boolean }
                   message: { type: string }
-                  data:    { type: 'null' }
+                  data:    { type: object, nullable: true }
         '404':
           description: Quiz not found
 

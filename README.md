@@ -126,7 +126,7 @@ backend/
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `NODE_ENV` | Environment mode | `development` |
-| `PORT` | Server port | `5000` |
+| `PORT` | Server port | `5001` |
 | `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/comes_db` |
 | `JWT_SECRET` | JWT signing secret | - |
 | `JWT_EXPIRES_IN` | JWT expiration time | `7d` |

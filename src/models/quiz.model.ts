@@ -137,7 +137,6 @@ const quizSchema = new Schema<IQuiz>(
 // Indexes
 // ============================================
 
-quizSchema.index({ slug: 1 });
 quizSchema.index({ isVisible: 1 });
 quizSchema.index({ createdAt: -1 });
 

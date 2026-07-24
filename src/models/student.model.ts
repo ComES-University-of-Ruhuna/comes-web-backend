@@ -152,7 +152,6 @@ const studentSchema = new Schema<IStudent>(
 // Index for better query performance
 studentSchema.index({ email: 1, registrationNo: 1 });
 studentSchema.index({ batch: 1 });
-studentSchema.index({ username: 1 });
 
 // Pre-save middleware to hash password
 studentSchema.pre('save', async function (next) {

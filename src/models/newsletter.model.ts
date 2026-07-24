@@ -63,9 +63,7 @@ const newsletterSchema = new Schema<INewsletter>(
 // Indexes
 // ============================================
 
-newsletterSchema.index({ email: 1 });
 newsletterSchema.index({ isSubscribed: 1 });
-newsletterSchema.index({ unsubscribeToken: 1 });
 
 // ============================================
 // Pre-save Middleware

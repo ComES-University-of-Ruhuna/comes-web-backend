@@ -59,6 +59,9 @@ const corsOptions: cors.CorsOptions = {
       config.frontendUrl,
       'http://localhost:3000',
       'http://localhost:5173',
+      ...(config.env === 'development'
+        ? [/^http:\/\/(localhost|127\.0\.0\.1):517\d$/]
+        : []),
       'https://comes-web-frontend.vercel.app',
       'https://comesuor.lk',
       // Allow all Vercel preview deployments

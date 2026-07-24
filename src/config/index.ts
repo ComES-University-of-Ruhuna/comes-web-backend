@@ -39,7 +39,7 @@ interface Config {
 
 const config: Config = {
   env: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '5000', 10),
+  port: parseInt(process.env.PORT || '5001', 10),
   mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/comes_db',
   jwt: {
     secret: process.env.JWT_SECRET || 'default-jwt-secret-change-in-production',
