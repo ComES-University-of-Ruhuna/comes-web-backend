@@ -6,6 +6,10 @@ A secure, production-ready Node.js/Express backend for the ComES website.
 
 Each event may have registered student members with an OC role, team, explicit `isChair` permission, and contribution notes. Committee data is excluded from public event responses. Chair access does not change a student's global role and is checked atomically on event/contribution writes. Only administrators manage assignments; role names alone never grant chair access.
 
+The public `GET /events/:id/organizers` endpoint returns only each member's name, role, and team for read-only tables. Deleted student accounts are omitted. Registration numbers, account IDs, emails, contribution notes, and chair permissions are not exposed.
+
+Event editors support an optional HTTP/HTTPS image URL and end date/time (send `endDate: null` to clear it). When both dates are submitted, the end must be after the start. New categories are Competition, Workshop, and Other. Existing Hackathon, Seminar, and Social records serialize and filter as Competition, Workshop, and Other respectively; no destructive migration is needed.
+
 All paths below are relative to `/api/v1`:
 
 | Method | Path | Access |

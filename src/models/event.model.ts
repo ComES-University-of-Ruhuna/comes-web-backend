@@ -5,6 +5,12 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import slugify from 'slugify';
 
+export const eventCategoryGroups: Record<string, string[]> = {
+  competition: ['competition', 'hackathon'],
+  workshop: ['workshop', 'seminar'],
+  other: ['other', 'social'],
+};
+
 export interface IOrganizingCommitteeMember {
   member: mongoose.Types.ObjectId;
   role: string;
@@ -20,7 +26,7 @@ export interface IEvent extends Document {
   description: string;
   shortDescription?: string;
   date: Date;
-  endDate?: Date;
+  endDate?: Date | null;
   location: string;
   type: 'workshop' | 'hackathon' | 'seminar' | 'competition' | 'social' | 'other';
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
@@ -84,6 +90,7 @@ const eventSchema = new Schema<IEvent>(
       type: String,
       enum: ['workshop', 'hackathon', 'seminar', 'competition', 'social', 'other'],
       default: 'other',
+      get: (value: IEvent['type']): IEvent['type'] => value === 'hackathon' ? 'competition' : value === 'seminar' ? 'workshop' : value === 'social' ? 'other' : value,
     },
     status: {
       type: String,
@@ -118,8 +125,8 @@ const eventSchema = new Schema<IEvent>(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
+    toJSON: { virtuals: true, getters: true },
+    toObject: { virtuals: true, getters: true },
   }
 );
 

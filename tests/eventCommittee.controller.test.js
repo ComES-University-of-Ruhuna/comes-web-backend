@@ -41,6 +41,46 @@ test('private committee data is excluded from public event queries', () => {
   expect(Model.schema.path('organizingCommittee').options.select).toBe(false);
 });
 
+test('public committee exposes only names, roles and teams and omits deleted accounts', async () => {
+  const chain = query({ organizingCommittee: [
+    { member: { name: 'Alex', email: 'private@example.com', registrationNo: 'PRIVATE' }, role: 'Chair', team: 'Operations', isChair: true, contributions: 'Private notes' },
+    { member: null, role: 'Member', team: 'Logistics' },
+  ] });
+  Event.findOne.mockReturnValue(chain);
+  const { body } = await invoke(handlers.getPublicEventCommittee, { params: { id: eventId } });
+  expect(body.data.members).toEqual([{ name: 'Alex', role: 'Chair', team: 'Operations' }]);
+  expect(chain.select).toHaveBeenCalledWith('organizingCommittee');
+  expect(chain.populate).toHaveBeenCalledWith({ path: 'organizingCommittee.member', select: 'name -_id' });
+});
+
+test('public committee supports an empty roster and a missing event', async () => {
+  Event.findOne.mockReturnValue(query({ organizingCommittee: [] }));
+  expect((await invoke(handlers.getPublicEventCommittee, request())).body.data.members).toEqual([]);
+  Event.findOne.mockReturnValue(query(null));
+  expect((await invoke(handlers.getPublicEventCommittee, request())).error.statusCode).toBe(404);
+});
+
+test.each(['create', 'update'])('event %s validates images, end times and the three categories', async (operation) => {
+  const { eventValidations } = require('../dist/middleware/validation.middleware');
+  const base = { title: 'Workshop', description: 'A community workshop', location: 'Faculty hall', date: '2099-01-01T10:00:00Z', type: 'workshop' };
+  for (const fields of [ { endDate: '2099-01-01T09:00:00Z' }, { image: 'javascript:alert(1)' }, { type: 'social' } ]) {
+    const req = { body: { ...base, ...fields } };
+    await Promise.all(eventValidations[operation].map((validation) => validation.run(req)));
+    expect(validationResult(req).isEmpty()).toBe(false);
+  }
+  for (const type of ['competition', 'workshop', 'other']) {
+    const req = { body: { ...base, type, image: 'https://example.com/event.jpg', endDate: null } };
+    await Promise.all(eventValidations[operation].map((validation) => validation.run(req)));
+    expect(validationResult(req).isEmpty()).toBe(true);
+  }
+});
+
+test.each([['hackathon', 'competition'], ['seminar', 'workshop'], ['social', 'other']])('legacy category %s serializes as %s', (legacy, category) => {
+  const { Event: Model } = jest.requireActual('../dist/models/event.model');
+  const record = new Model({ type: legacy });
+  expect(record.toJSON().type).toBe(category);
+});
+
 test('lists only events where this student is explicitly assigned as chair', async () => {
   Event.find.mockReturnValue({
     select: jest.fn().mockReturnThis(),

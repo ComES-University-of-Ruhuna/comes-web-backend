@@ -117,9 +117,9 @@ components:
         description:      { type: string }
         shortDescription: { type: string }
         date:             { type: string, format: date-time }
-        endDate:          { type: string, format: date-time }
+        endDate:          { type: string, format: date-time, nullable: true }
         location:         { type: string }
-        type:             { type: string, enum: [workshop, hackathon, seminar, competition, social, other] }
+        type:             { type: string, enum: [competition, workshop, other] }
         status:           { type: string, enum: [upcoming, ongoing, completed, cancelled] }
         image:            { type: string }
         icon:             { type: string }
@@ -134,15 +134,15 @@ components:
 
     CreateEventRequest:
       type: object
-      required: [title, description, date, location]
+      required: [title, description, date, location, type]
       properties:
         title:            { type: string, minLength: 3, maxLength: 200 }
         description:      { type: string, minLength: 10, maxLength: 5000 }
         shortDescription: { type: string, maxLength: 300 }
         date:             { type: string, format: date-time }
-        endDate:          { type: string, format: date-time }
+        endDate:          { type: string, format: date-time, nullable: true }
         location:         { type: string }
-        type:             { type: string, enum: [workshop, hackathon, seminar, competition, social, other] }
+        type:             { type: string, enum: [competition, workshop, other] }
         status:           { type: string, enum: [upcoming, ongoing, completed, cancelled] }
         image:            { type: string }
         icon:             { type: string }
@@ -884,7 +884,7 @@ paths:
           schema: { type: string, enum: [current, past] }
         - name: type
           in: query
-          schema: { type: string, enum: [workshop, hackathon, seminar, competition, social, other] }
+          schema: { type: string, enum: [competition, workshop, other] }
       responses:
         '200':
           description: List of events
@@ -901,6 +901,38 @@ paths:
       responses:
         '201':
           description: Event created
+
+  /events/{id}/organizers:
+    get:
+      tags: [Events]
+      summary: Public organizing committee names, roles, and teams
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Public roster, excluding deleted members and private assignment fields
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      members:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name: { type: string }
+                            role: { type: string }
+                            team: { type: string }
+        '404':
+          description: Event not found
 
   /events/featured:
     get:

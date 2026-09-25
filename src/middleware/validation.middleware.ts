@@ -170,8 +170,18 @@ export const userValidations = {
 // Event Validations
 // ============================================
 
+const eventMediaAndSchedule = () => [
+  body('endDate').optional({ nullable: true }).isISO8601().bail()
+    .custom((value, { req }) => !req.body.date || new Date(value) > new Date(req.body.date))
+    .withMessage('End time must be after the start time'),
+  body('image').optional({ checkFalsy: true }).isString().bail().isLength({ max: 2000 }).bail()
+    .isURL({ protocols: ['http', 'https'], require_protocol: true })
+    .withMessage('Image must be an HTTP or HTTPS URL'),
+];
+
 export const eventValidations = {
   create: [
+    ...eventMediaAndSchedule(),
     body('title')
       .trim()
       .isLength({ min: 3, max: 200 })
@@ -188,7 +198,7 @@ export const eventValidations = {
       .isLength({ min: 2, max: 200 })
       .withMessage('Location must be between 2 and 200 characters'),
     body('type')
-      .isIn(['workshop', 'hackathon', 'seminar', 'competition', 'social', 'other'])
+      .isIn(['competition', 'workshop', 'other'])
       .withMessage('Invalid event type'),
     body('maxParticipants')
       .optional()
@@ -197,6 +207,8 @@ export const eventValidations = {
   ],
 
   update: [
+    ...eventMediaAndSchedule(),
+    body('type').optional().isIn(['competition', 'workshop', 'other']).withMessage('Invalid event type'),
     body('title')
       .optional()
       .trim()

@@ -25,12 +25,17 @@ test.each(['current', 'past'])('event period %s uses the end date with a start d
   const { body } = await invoke(getAllEvents, { query: { period, type: 'workshop', page: '2', limit: '9' } });
   const dateFilter = { $expr: { [period === 'current' ? '$gte' : '$lt']: [{ $ifNull: ['$endDate', '$date'] }, expect.any(Date)] } };
   const filter = period === 'current'
-    ? { type: 'workshop', $and: [{ status: { $ne: 'completed' } }, dateFilter] }
-    : { type: 'workshop', $and: [{ $or: [{ status: 'completed' }, dateFilter] }] };
+    ? { type: { $in: ['workshop', 'seminar'] }, $and: [{ status: { $ne: 'completed' } }, dateFilter] }
+    : { type: { $in: ['workshop', 'seminar'] }, $and: [{ $or: [{ status: 'completed' }, dateFilter] }] };
   expect(body.success).toBe(true);
   expect(Event.find).toHaveBeenCalledWith(filter);
   expect(Event.countDocuments).toHaveBeenCalledWith(filter);
   expect(query.skip).toHaveBeenCalledWith(9);
+});
+
+test.each([['competition', 'hackathon'], ['workshop', 'seminar'], ['other', 'social']])('category %s includes legacy %s events', async (category, legacy) => {
+  await invoke(getAllEvents, { query: { type: category } });
+  expect(Event.find).toHaveBeenCalledWith({ type: { $in: [category, legacy] } });
 });
 
 test.each([undefined, { role: 'user' }])('public visitors cannot request drafts', async (user) => {

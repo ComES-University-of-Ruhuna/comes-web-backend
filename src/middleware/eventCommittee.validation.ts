@@ -19,24 +19,12 @@ export const committeeContributions = [
 export const organizedEventDetails = [
   ...committeeEventId,
   ...eventValidations.update,
-  body('endDate').optional().isISO8601(),
   body('location')
     .optional()
     .isString()
     .bail()
     .trim()
     .isLength({ min: 2, max: 200 }),
-  body('type')
-    .optional()
-    .isIn([
-      'workshop',
-      'hackathon',
-      'seminar',
-      'competition',
-      'social',
-      'other',
-    ]),
   body('maxParticipants').optional().isInt({ min: 1 }),
   body('shortDescription').optional().isString().bail().isLength({ max: 300 }),
-  body('image').optional().isString().bail().isLength({ max: 2000 }),
 ];

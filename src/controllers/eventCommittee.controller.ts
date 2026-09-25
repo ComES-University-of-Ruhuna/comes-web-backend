@@ -79,6 +79,20 @@ export const getOrganizedEvents = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { events } });
 });
 
+export const getPublicEventCommittee = asyncHandler(async (req, res) => {
+  const event = await Event.findOne({ _id: req.params.id })
+    .select('organizingCommittee')
+    .populate<{ organizingCommittee: { member: { name: string } | null; role: string; team: string }[] }>({
+      path: 'organizingCommittee.member',
+      select: 'name -_id',
+    });
+  if (!event) throw new NotFoundError('Event');
+  const members = event.organizingCommittee.flatMap((entry) => entry.member
+    ? [{ name: entry.member.name, role: entry.role, team: entry.team }]
+    : []);
+  res.json({ success: true, data: { members } });
+});
+
 export const getEventCommittee = asyncHandler(async (req, res) => {
   const event = await Event.findOne(accessFilter(req))
     .select('+organizingCommittee')

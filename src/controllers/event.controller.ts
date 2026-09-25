@@ -4,6 +4,7 @@
 
 import { Request, Response } from 'express';
 import { Event } from '../models';
+import { eventCategoryGroups } from '../models/event.model';
 import { asyncHandler, NotFoundError, AppError } from '../utils';
 
 /**
@@ -26,7 +27,10 @@ export const getAllEvents = asyncHandler(
 
     // Filter by type
     if (req.query.type) {
-      filter.type = req.query.type;
+      const category = String(req.query.type);
+      filter.type = Object.hasOwn(eventCategoryGroups, category)
+        ? { $in: eventCategoryGroups[category] }
+        : req.query.type;
     }
 
     // Filter featured

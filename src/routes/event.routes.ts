@@ -16,7 +16,7 @@ import {
 } from '../controllers/event.controller';
 import { protect, restrictTo } from '../middleware/auth.middleware';
 import { validate, eventValidations, commonValidations } from '../middleware/validation.middleware';
-import { getEventCommittee, searchCommitteeMembers, saveCommitteeMember, removeCommitteeMember, updateMemberContributions } from '../controllers/eventCommittee.controller';
+import { getPublicEventCommittee, getEventCommittee, searchCommitteeMembers, saveCommitteeMember, removeCommitteeMember, updateMemberContributions } from '../controllers/eventCommittee.controller';
 import { committeeEventId, committeeMemberId, committeeAssignment, committeeContributions } from '../middleware/eventCommittee.validation';
 
 const router = Router();
@@ -31,6 +31,7 @@ router.patch('/:id/committee/:memberId/contributions', protect, restrictTo('admi
 router.get('/', getAllEvents);
 router.get('/featured', getFeaturedEvents);
 router.get('/slug/:slug', getEventBySlug);
+router.get('/:id/organizers', validate(committeeEventId), getPublicEventCommittee);
 router.get('/:id', validate(commonValidations.mongoId('id')), getEvent);
 
 // Protected routes
