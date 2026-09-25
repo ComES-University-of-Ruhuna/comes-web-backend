@@ -27,6 +27,8 @@ import { protect, restrictTo, protectStudent } from '../middleware/auth.middlewa
 import { validate, authValidations } from '../middleware/validation.middleware';
 import { studentPasswordRecovery } from '../controllers/passwordRecovery.controller';
 import { body, param } from 'express-validator';
+import { getOrganizedEvents, getEventCommittee, updateOrganizedEvent, updateMemberContributions } from '../controllers/eventCommittee.controller';
+import { committeeEventId, committeeContributions, organizedEventDetails } from '../middleware/eventCommittee.validation';
 
 const router = Router();
 
@@ -83,6 +85,11 @@ router.post('/notify-all', protect, restrictTo('admin'), sendNotificationToAllSt
 
 // Student authenticated routes
 router.use(protectStudent);
+
+router.get('/organized-events', getOrganizedEvents);
+router.get('/organized-events/:id', validate(committeeEventId), getEventCommittee);
+router.patch('/organized-events/:id', validate(organizedEventDetails), updateOrganizedEvent);
+router.patch('/organized-events/:id/committee/:memberId/contributions', validate(committeeContributions), updateMemberContributions);
 
 router.get('/me', getProfile);
 router.patch('/me', updateProfile);

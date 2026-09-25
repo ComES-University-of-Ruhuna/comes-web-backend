@@ -159,6 +159,7 @@ export const getEventBySlug = asyncHandler(
  */
 export const createEvent = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
+    if (req.body.organizingCommittee !== undefined) throw new AppError('Use the committee assignment endpoint', 400);
     const eventData = {
       ...req.body,
       createdBy: req.user!._id,
@@ -183,7 +184,9 @@ export const createEvent = asyncHandler(
  */
 export const updateEvent = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const event = await Event.findByIdAndUpdate(req.params.id, req.body, {
+    const allowedFields = ['title', 'description', 'shortDescription', 'date', 'endDate', 'location', 'type', 'status', 'image', 'icon', 'maxParticipants', 'tags', 'isFeatured'];
+    if (Object.keys(req.body).some((key) => !allowedFields.includes(key))) throw new AppError('Unsupported event fields', 400);
+    const event = await Event.findByIdAndUpdate(req.params.id, { $set: req.body }, {
       new: true,
       runValidators: true,
     });

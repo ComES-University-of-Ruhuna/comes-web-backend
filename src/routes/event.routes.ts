@@ -16,8 +16,16 @@ import {
 } from '../controllers/event.controller';
 import { protect, restrictTo } from '../middleware/auth.middleware';
 import { validate, eventValidations, commonValidations } from '../middleware/validation.middleware';
+import { getEventCommittee, searchCommitteeMembers, saveCommitteeMember, removeCommitteeMember, updateMemberContributions } from '../controllers/eventCommittee.controller';
+import { committeeEventId, committeeMemberId, committeeAssignment, committeeContributions } from '../middleware/eventCommittee.validation';
 
 const router = Router();
+
+router.get('/committee-members', protect, restrictTo('admin'), searchCommitteeMembers);
+router.get('/:id/committee', protect, restrictTo('admin'), validate(committeeEventId), getEventCommittee);
+router.put('/:id/committee/:memberId', protect, restrictTo('admin'), validate(committeeAssignment), saveCommitteeMember);
+router.delete('/:id/committee/:memberId', protect, restrictTo('admin'), validate(committeeMemberId), removeCommitteeMember);
+router.patch('/:id/committee/:memberId/contributions', protect, restrictTo('admin'), validate(committeeContributions), updateMemberContributions);
 
 // Public routes
 router.get('/', getAllEvents);

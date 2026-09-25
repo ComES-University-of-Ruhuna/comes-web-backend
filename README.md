@@ -2,6 +2,26 @@
 
 A secure, production-ready Node.js/Express backend for the ComES website.
 
+## Event Organizing Committees
+
+Each event may have registered student members with an OC role, team, explicit `isChair` permission, and contribution notes. Committee data is excluded from public event responses. Chair access does not change a student's global role and is checked atomically on event/contribution writes. Only administrators manage assignments; role names alone never grant chair access.
+
+All paths below are relative to `/api/v1`:
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/events/committee-members?search=...` | Admin; limited student name/registration/username search |
+| GET | `/events/:id/committee` | Admin; event and populated committee |
+| PUT | `/events/:id/committee/:memberId` | Admin; `{role, team, isChair}`; preserves contributions |
+| DELETE | `/events/:id/committee/:memberId` | Admin; removes assignment and chair access |
+| PATCH | `/events/:id/committee/:memberId/contributions` | Admin; `{contributions}` |
+| GET | `/students/organized-events` | Student; only their chair assignments |
+| GET | `/students/organized-events/:id` | Assigned chair; event and committee |
+| PATCH | `/students/organized-events/:id` | Assigned chair; allowlisted event details only |
+| PATCH | `/students/organized-events/:id/committee/:memberId/contributions` | Assigned chair; `{contributions}` for a member of that event |
+
+Assignment roles and teams are required and limited to 100 characters; contributions are limited to 5,000 characters and may be cleared. Invalid member IDs, nonexistent students, and unsupported fields are rejected. Existing events need no data migration; committees default to an empty list. Coverage: `tests/eventCommittee.controller.test.js`.
+
 ## 🚀 Features
 
 - **Authentication & Authorization**

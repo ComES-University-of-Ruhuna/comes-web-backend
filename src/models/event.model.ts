@@ -5,6 +5,14 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import slugify from 'slugify';
 
+export interface IOrganizingCommitteeMember {
+  member: mongoose.Types.ObjectId;
+  role: string;
+  team: string;
+  isChair: boolean;
+  contributions: string;
+}
+
 export interface IEvent extends Document {
   _id: mongoose.Types.ObjectId;
   title: string;
@@ -23,10 +31,19 @@ export interface IEvent extends Document {
   registrations: mongoose.Types.ObjectId[];
   tags: string[];
   isFeatured: boolean;
+  organizingCommittee: IOrganizingCommitteeMember[];
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const organizingCommitteeSchema = new Schema<IOrganizingCommitteeMember>({
+  member: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
+  role: { type: String, required: true, trim: true, maxlength: 100 },
+  team: { type: String, required: true, trim: true, maxlength: 100 },
+  isChair: { type: Boolean, default: false },
+  contributions: { type: String, default: '', maxlength: 5000 },
+}, { _id: false });
 
 const eventSchema = new Schema<IEvent>(
   {
@@ -92,6 +109,7 @@ const eventSchema = new Schema<IEvent>(
       type: Boolean,
       default: false,
     },
+    organizingCommittee: { type: [organizingCommitteeSchema], default: [], select: false },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -114,6 +132,7 @@ eventSchema.index({ status: 1 });
 eventSchema.index({ type: 1 });
 eventSchema.index({ isFeatured: 1 });
 eventSchema.index({ createdAt: -1 });
+eventSchema.index({ 'organizingCommittee.member': 1 });
 
 // ============================================
 // Virtual Fields
