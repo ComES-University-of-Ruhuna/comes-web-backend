@@ -9,6 +9,7 @@ import {
   refreshStudentToken,
   getProfile,
   updateProfile,
+  uploadProfileAvatar,
   updateStudentRole,
   verifyEmail,
   getAllStudents,
@@ -94,6 +95,7 @@ router.patch('/organized-events/:id/committee/:memberId/contributions', validate
 
 router.get('/me', getProfile);
 router.patch('/me', updateProfile);
+router.post('/me/avatar', uploadProfileAvatar);
 router.delete('/me', deleteAccount);
 router.post('/change-password', changePassword);
 router.get('/my-events', getMyEvents);

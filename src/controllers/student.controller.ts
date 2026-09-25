@@ -10,6 +10,7 @@ import { Student, IStudent } from '../models/student.model';
 import { Event, User } from '../models';
 import { asyncHandler, AppError, logger } from '../utils';
 import { sendEmail } from '../utils/email';
+import { uploadImage } from '../utils/imageUpload';
 import config from '../config';
 
 // Generate JWT token
@@ -239,6 +240,17 @@ export const updateStudentRole = asyncHandler(
     res.status(200).json({ success: true, message: 'Student access updated', data: { student: updated } });
   }
 );
+
+export const uploadProfileAvatar = asyncHandler(async (req, res) => {
+  if (!req.student) throw new AppError('Student authentication required', 401);
+  const avatar = await uploadImage(req, res, 'comes/profiles');
+  const student = await Student.findByIdAndUpdate(req.student._id, { $set: { avatar } }, {
+    new: true,
+    runValidators: true,
+  });
+  if (!student) throw new AppError('Student not found', 404);
+  res.status(200).json({ success: true, data: { student } });
+});
 
 export const updateProfile = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction): Promise<void> => {

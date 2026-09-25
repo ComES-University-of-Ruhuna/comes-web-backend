@@ -207,6 +207,12 @@ In **Admin > Committee & Team**, add or edit a member and choose **Upload photo*
 
 Uploads occur before the member record is saved. Cancelling the editor, replacing an image, removing a photo, or deleting a member does not delete assets from Cloudinary because URLs may be shared by other records. Remove unused assets separately in Cloudinary. Credentials and upload signing stay on the backend; only the public image URL is returned to the frontend.
 
+#### Student Profile Photos
+
+At `/student/profile`, use the camera button to choose a JPEG, PNG, or WebP image up to 3 MiB. Photos save immediately, independently of **Save Changes**; unsaved profile text is preserved. Progress, validation errors, and retry are available, and a failed upload keeps the previous photo.
+
+`POST /api/v1/students/me/avatar` requires a student access token (including linked student admins) and accepts a single multipart `image` with no other fields. It reuses the backend Cloudinary credentials above, uploads to `comes/profiles`, updates only the authenticated student's `avatar`, and returns `{ success: true, data: { student } }`. A standalone staff token cannot select another student's profile. The frontend refreshes its persisted student session from this response. Missing configuration returns 503. Replaced or orphaned Cloudinary assets are not deleted automatically; remove unused assets separately.
+
 ### Blog and Project Publishing
 
 Admins and authorized student admins manage saved content at `/admin/blog` and `/admin/projects`. Blog posts start as drafts; select **Published** to make an article visible at `/blog` and `/blog/:slug`. Article bodies support Markdown. Draft and archived articles are not publicly readable. Updating an article recalculates its slug and reading time and sets its first publication date.

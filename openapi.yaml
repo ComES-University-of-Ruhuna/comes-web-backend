@@ -1984,6 +1984,39 @@ paths:
         '204':
           description: Account deleted
 
+  /students/me/avatar:
+    post:
+      tags: [Students]
+      summary: Upload and save own profile photo
+      description: Requires a student access token, including linked student admins. Accepts one JPEG, PNG, or WebP image up to 3 MiB and no text fields. Uploads to comes/profiles in Cloudinary and immediately saves the avatar URL on the authenticated student's account. Returns success and data.student containing the saved profile. Previous Cloudinary assets are not deleted automatically.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              additionalProperties: false
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Profile photo saved; returns success and data.student with the updated avatar
+        '400':
+          description: Missing, unsupported, oversized, or malformed image upload
+        '401':
+          description: Student authentication required
+        '404':
+          description: Student account no longer exists
+        '502':
+          description: Cloudinary upload failed
+        '503':
+          description: Backend Cloudinary credentials are not configured
+
   /students/change-password:
     post:
       tags: [Students]

@@ -19,7 +19,7 @@ const imageUpload = multer({
 export const uploadImage = async (
   req: Request,
   res: Response,
-  folder: 'comes/team' | 'comes/events' | 'comes/gallery'
+  folder: 'comes/team' | 'comes/events' | 'comes/gallery' | 'comes/profiles'
 ): Promise<string> => {
   const { cloudName, apiKey, apiSecret } = config.cloudinary;
   if (!cloudName || !apiKey || !apiSecret) {

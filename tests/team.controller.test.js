@@ -1,7 +1,13 @@
 jest.mock('../dist/models', () => ({ TeamMember: { find: jest.fn(), findOne: jest.fn(), findByIdAndUpdate: jest.fn() } }));
 jest.mock('cloudinary', () => ({ v2: { uploader: { upload_stream: jest.fn() } } }));
+jest.mock('../dist/models/student.model', () => ({ Student: { findByIdAndUpdate: jest.fn() } }));
 jest.mock('../dist/middleware/auth.middleware', () => ({
   ...jest.requireActual('../dist/middleware/auth.middleware'),
+  protectStudent: (req, res, next) => {
+    if (!req.headers['x-test-student']) return res.status(401).json({ message: 'Unauthorized' });
+    req.student = { _id: req.headers['x-test-student'] };
+    next();
+  },
   protect: (req, res, next) => {
     if (!req.headers['x-test-role']) return res.status(401).json({ message: 'Unauthorized' });
     req.user = { role: req.headers['x-test-role'] };
@@ -9,6 +15,7 @@ jest.mock('../dist/middleware/auth.middleware', () => ({
   },
 }));
 const { TeamMember } = require('../dist/models');
+const { Student } = require('../dist/models/student.model');
 const { getAllMembers, getMember, updateMember } = require('../dist/controllers/team.controller');
 const { TeamMember: TeamModel } = require('../dist/models/team.model');
 
@@ -68,12 +75,14 @@ describe('committee avatar uploads', () => {
     const app = express();
     app.use('/team', require('../dist/routes/team.routes').default);
     app.use('/events', require('../dist/routes/event.routes').default);
+    app.use('/students', require('../dist/routes/student.routes').default);
     app.use((error, req, res, next) => res.status(error.statusCode || 500).json({ message: error.message }));
     await new Promise(resolve => { server = app.listen(0, '127.0.0.1', resolve); });
     endpoint = `http://127.0.0.1:${server.address().port}/team/avatar`;
   });
   beforeEach(() => {
     config.cloudinary = { cloudName: 'test-cloud', apiKey: 'test-key', apiSecret: 'test-secret' };
+    Student.findByIdAndUpdate.mockResolvedValue({ _id: 'student-1', avatar: 'https://res.cloudinary.com/test-cloud/image/upload/photo.png' });
     cloudinary.uploader.upload_stream.mockImplementation((options, callback) => ({ end: () => callback(null, { secure_url: 'https://res.cloudinary.com/test-cloud/image/upload/photo.png' }) }));
   });
   afterAll(async () => {
@@ -124,5 +133,42 @@ describe('committee avatar uploads', () => {
     const response = await upload();
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ message: 'Image upload failed. Please try again.' });
+  });
+
+  const uploadProfile = (headers = { 'x-test-student': 'student-1' }, type = 'image/png', bytes = 10, extraFields = false) => {
+    const form = new FormData();
+    form.append('image', new Blob([Buffer.alloc(bytes)], { type }), 'photo.png');
+    if (extraFields) form.append('studentId', 'another-student');
+    return fetch(endpoint.replace('/team/avatar', '/students/me/avatar'), { method: 'POST', headers, body: form });
+  };
+  test.each([{}, { 'x-test-role': 'admin' }])('profile uploads require student authentication: %j', async headers => {
+    expect((await uploadProfile(headers)).status).toBe(401);
+    expect(cloudinary.uploader.upload_stream).not.toHaveBeenCalled();
+    expect(Student.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+  test('saves the uploaded profile image on the authenticated student only', async () => {
+    const response = await uploadProfile();
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.student.avatar).toBe('https://res.cloudinary.com/test-cloud/image/upload/photo.png');
+    expect(Student.findByIdAndUpdate).toHaveBeenCalledWith('student-1', { $set: { avatar: 'https://res.cloudinary.com/test-cloud/image/upload/photo.png' } }, { new: true, runValidators: true });
+    expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(expect.objectContaining({ folder: 'comes/profiles', resource_type: 'image' }), expect.any(Function));
+  });
+  test.each([['image/svg+xml', 10, false], ['image/png', 3 * 1024 * 1024 + 1, false], ['image/png', 10, true]])('rejects invalid profile uploads without changing the profile: %s %s %s', async (type, bytes, extraFields) => {
+    expect((await uploadProfile(undefined, type, bytes, extraFields)).status).toBe(400);
+    expect(Student.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+  test('keeps profile metadata unchanged when Cloudinary fails or is not configured', async () => {
+    config.cloudinary.apiSecret = '';
+    expect((await uploadProfile()).status).toBe(503);
+    config.cloudinary.apiSecret = 'test-secret';
+    cloudinary.uploader.upload_stream.mockImplementation((options, callback) => ({ end: () => callback({ http_code: 500, message: 'private provider details' }) }));
+    const response = await uploadProfile();
+    expect(response.status).toBe(502);
+    expect((await response.json()).message).not.toContain('private provider');
+    expect(Student.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+  test('reports a profile removed during upload instead of returning a saved avatar', async () => {
+    Student.findByIdAndUpdate.mockResolvedValueOnce(null);
+    expect((await uploadProfile()).status).toBe(404);
   });
 });
