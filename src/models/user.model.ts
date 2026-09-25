@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import validator from 'validator';
 
 export interface IUser extends Document {
+  studentAccount?: mongoose.Types.ObjectId;
   _id: mongoose.Types.ObjectId;
   name: string;
   email: string;
@@ -22,6 +23,7 @@ export interface IUser extends Document {
   isActive: boolean;
   isEmailVerified: boolean;
   passwordChangedAt?: Date;
+  passwordVersion?: number;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
   emailVerificationToken?: string;
@@ -41,6 +43,7 @@ type IUserModel = Model<IUser>;
 
 const userSchema = new Schema<IUser>(
   {
+    studentAccount: { type: Schema.Types.ObjectId, ref: 'Student', select: false, unique: true, sparse: true },
     name: {
       type: String,
       required: [true, 'Please provide your name'],
@@ -121,6 +124,7 @@ const userSchema = new Schema<IUser>(
       default: false,
     },
     passwordChangedAt: Date,
+    passwordVersion: { type: Number, default: 0 },
     passwordResetToken: String,
     passwordResetExpires: Date,
     emailVerificationToken: String,

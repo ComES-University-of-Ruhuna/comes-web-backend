@@ -14,6 +14,9 @@ import { asyncHandler, NotFoundError } from '../utils';
 export const getAllMembers = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const filter: Record<string, unknown> = { isActive: true };
+    if (req.query.includeInactive === 'true' && req.user?.role === 'admin') {
+      delete filter.isActive;
+    }
 
     // Filter by department
     if (req.query.department) {
@@ -81,7 +84,10 @@ export const getMembersByDepartment = asyncHandler(
  */
 export const getMember = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const member = await TeamMember.findById(req.params.id)
+    const member = await TeamMember.findOne({
+      _id: req.params.id,
+      ...(req.user?.role === 'admin' ? {} : { isActive: true }),
+    })
       .populate('user', 'name avatar email bio linkedin github');
 
     if (!member) {

@@ -21,10 +21,40 @@ declare global {
 
 interface JwtPayload {
   id: string;
+  passwordVersion?: number;
   type?: 'student' | 'user';
   iat: number;
   exp: number;
 }
+
+const resolveAdminUser = async (decoded: JwtPayload): Promise<IUser | null> => {
+  if (decoded.type !== 'student') {
+    const user = await User.findById(decoded.id).select('+passwordChangedAt +isActive +studentAccount');
+    if (user?.studentAccount) {
+      throw new AuthenticationError('Please sign in through your student account.');
+    }
+    if (user && (decoded.passwordVersion ?? 0) !== (user.passwordVersion ?? 0)) {
+      throw new AuthenticationError('Your password has been reset. Please log in again.');
+    }
+    if (user?.changedPasswordAfter(decoded.iat)) {
+      throw new AuthenticationError('User recently changed password. Please log in again.');
+    }
+    return user;
+  }
+
+  const student = await Student.findById(decoded.id).select('+adminUser');
+  if (!student || (decoded.passwordVersion ?? 0) !== (student.passwordVersion ?? 0)) {
+    throw new AuthenticationError('Your student session has expired. Please log in again.');
+  }
+  if (student.role !== 'admin' || !student.adminUser) {
+    throw new AuthorizationError('Administrator access is required.');
+  }
+  const user = await User.findById(student.adminUser).select('+isActive');
+  if (!user || user.role !== 'admin' || !user.isActive) {
+    throw new AuthorizationError('Administrator access is no longer available.');
+  }
+  return user;
+};
 
 /**
  * Protect routes - require authentication
@@ -51,15 +81,10 @@ export const protect = asyncHandler(
       const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
 
       // Check if user still exists
-      const currentUser = await User.findById(decoded.id).select('+passwordChangedAt');
+      const currentUser = await resolveAdminUser(decoded);
 
       if (!currentUser) {
         throw new AuthenticationError('The user belonging to this token no longer exists.');
-      }
-
-      // Check if user changed password after the token was issued
-      if (currentUser.changedPasswordAfter(decoded.iat)) {
-        throw new AuthenticationError('User recently changed password. Please log in again.');
       }
 
       // Check if user is active
@@ -98,7 +123,7 @@ export const optionalAuth = asyncHandler(
     if (token) {
       try {
         const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
-        const currentUser = await User.findById(decoded.id).select('+isActive');
+        const currentUser = await resolveAdminUser(decoded);
 
         if (currentUser && currentUser.isActive) {
           req.user = currentUser;
@@ -184,6 +209,10 @@ export const protectStudent = asyncHandler(
 
       if (!currentStudent) {
         throw new AuthenticationError('The student belonging to this token no longer exists.');
+      }
+
+      if ((decoded.passwordVersion ?? 0) !== (currentStudent.passwordVersion ?? 0)) {
+        throw new AuthenticationError('Your password has been reset. Please log in again.');
       }
 
       // Grant access to protected route

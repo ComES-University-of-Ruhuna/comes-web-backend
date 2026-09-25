@@ -274,6 +274,7 @@ components:
         _id:        { type: string }
         name:       { type: string }
         email:      { type: string, format: email }
+        contactNo:  { type: string, maxLength: 30 }
         role:       { type: string }
         department: { type: string, enum: [executive, technical, creative, marketing, events, finance, advisory] }
         batch:      { type: string }
@@ -298,6 +299,7 @@ components:
       properties:
         name:       { type: string, minLength: 2, maxLength: 100 }
         email:      { type: string, format: email }
+        contactNo:  { type: string, maxLength: 30 }
         role:       { type: string }
         department: { type: string, enum: [executive, technical, creative, marketing, events, finance, advisory] }
         batch:      { type: string }
@@ -319,6 +321,7 @@ components:
       type: object
       properties:
         _id:             { type: string }
+        role:            { type: string, enum: [student, admin], default: student, readOnly: true }
         name:            { type: string }
         email:           { type: string, format: email }
         username:        { type: string }
@@ -608,6 +611,7 @@ paths:
     post:
       tags: [Auth]
       summary: Request a password reset email
+      description: Sends a single-use confirmation link valid for 10 minutes. Does not change the password. Requests are rate-limited and have a one-minute per-account cooldown.
       requestBody:
         required: true
         content:
@@ -619,30 +623,77 @@ paths:
                 email: { type: string, format: email }
       responses:
         '200':
-          description: Reset email sent
+          description: Generic response regardless of account existence or confirmation email delivery
+        '400':
+          description: Invalid email address
+        '429':
+          description: Too many recovery requests
 
   /auth/reset-password/{token}:
     patch:
       tags: [Auth]
-      summary: Reset password using token
+      summary: Confirm reset and email a randomly generated password
+      description: Consumes the confirmation token, hashes a new random password, revokes old sessions, and emails the new password. No password or authentication token is returned. No request body is needed.
       parameters:
         - name: token
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, pattern: '^[a-f0-9]{64}$' }
+      responses:
+        '200':
+          description: New password emailed successfully
+        '400':
+          description: Invalid, expired, or already used reset token
+        '409':
+          description: Another password change occurred during recovery
+        '429':
+          description: Too many recovery attempts
+        '503':
+          description: Email sending failed; previous password restored unless changed concurrently
+
+  /students/forgot-password:
+    post:
+      tags: [Students]
+      summary: Request a student password reset email
+      description: Sends a single-use confirmation link valid for 10 minutes without changing the password. Subject to rate limits and a one-minute per-account cooldown.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [password, passwordConfirm]
+              required: [email]
               properties:
-                password:        { type: string, minLength: 8 }
-                passwordConfirm: { type: string }
+                email: { type: string, format: email }
       responses:
         '200':
-          description: Password reset successful
+          description: Generic response regardless of account existence or confirmation email delivery
+        '400':
+          description: Invalid email address
+        '429':
+          description: Too many recovery requests
+
+  /students/reset-password/{token}:
+    patch:
+      tags: [Students]
+      summary: Confirm student reset and email a randomly generated password
+      description: Consumes the reset token, stores only the new password hash, revokes existing sessions, and emails the password. No password, authentication token, or request body is needed in the API response or request.
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-f0-9]{64}$' }
+      responses:
+        '200':
+          description: New password emailed successfully
+        '400':
+          description: Invalid, expired, or already used reset token
+        '409':
+          description: Another password change occurred during recovery
+        '429':
+          description: Too many recovery attempts
+        '503':
+          description: Email sending failed; previous password restored unless changed concurrently
 
   /auth/update-password:
     patch:
@@ -1394,10 +1445,18 @@ paths:
     get:
       tags: [Team]
       summary: Get all team members
+      description: Public responses contain active members only. Authenticated administrators can request inactive records for editing.
       parameters:
-        - name: isActive
+        - name: includeInactive
           in: query
-          schema: { type: boolean }
+          description: Honored only for administrators, including authorized student admins.
+          schema: { type: boolean, default: false }
+        - name: department
+          in: query
+          schema: { type: string, enum: [executive, technical, creative, marketing, events, finance, advisory] }
+        - name: batch
+          in: query
+          schema: { type: string }
       responses:
         '200':
           description: List of team members
@@ -1687,6 +1746,52 @@ paths:
       responses:
         '200':
           description: Search results
+
+  /students/{id}/role:
+    patch:
+      tags: [Students]
+      summary: Grant or remove student administrator access
+      description: Requires an existing administrator. Student-admin JWTs are accepted. Self-demotion is not allowed. Grants provision an internal content-ownership record; removal preserves content and the student account.
+      security:
+        - bearerAuth: []
+        - studentBearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { type: string, enum: [student, admin] }
+      responses:
+        '200':
+          description: Student access updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      student: { $ref: '#/components/schemas/Student' }
+        '400':
+          description: Invalid ID or role
+        '401':
+          description: Missing or invalid session
+        '403':
+          description: Administrator permission required, or self-demotion attempted
+        '404':
+          description: Student not found
+        '409':
+          description: Linked administrator account is disabled or no longer an admin
 
   /students/{id}:
     delete:

@@ -7,21 +7,21 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { Student, IStudent } from '../models/student.model';
-import { Event } from '../models';
+import { Event, User } from '../models';
 import { asyncHandler, AppError, logger } from '../utils';
 import { sendEmail } from '../utils/email';
 import config from '../config';
 
 // Generate JWT token
-const signToken = (id: string): string => {
-  return jwt.sign({ id, type: 'student' }, config.jwt.secret as jwt.Secret, {
+const signToken = (id: string, passwordVersion = 0): string => {
+  return jwt.sign({ id, type: 'student', passwordVersion }, config.jwt.secret as jwt.Secret, {
     expiresIn: config.jwt.expiresIn,
   } as jwt.SignOptions);
 };
 
 // Generate refresh token
-const signRefreshToken = (id: string): string => {
-  return jwt.sign({ id, type: 'student' }, config.jwt.refreshSecret as jwt.Secret, {
+const signRefreshToken = (id: string, passwordVersion = 0): string => {
+  return jwt.sign({ id, type: 'student', passwordVersion }, config.jwt.refreshSecret as jwt.Secret, {
     expiresIn: config.jwt.refreshExpiresIn,
   } as jwt.SignOptions);
 };
@@ -33,8 +33,8 @@ const createSendToken = (
   req: Request,
   res: Response
 ): void => {
-  const accessToken = signToken(student._id.toString());
-  const refreshToken = signRefreshToken(student._id.toString());
+  const accessToken = signToken(student._id.toString(), student.passwordVersion);
+  const refreshToken = signRefreshToken(student._id.toString(), student.passwordVersion);
 
   // Cookie options
   const isProduction = req.secure || req.headers['x-forwarded-proto'] === 'https';
@@ -146,7 +146,7 @@ export const refreshStudentToken = asyncHandler(
     }
 
     try {
-      const decoded = jwt.verify(token, config.jwt.refreshSecret) as { id: string; type?: string };
+      const decoded = jwt.verify(token, config.jwt.refreshSecret) as { id: string; type?: string; passwordVersion?: number };
 
       if (decoded.type !== 'student') {
         throw new AppError('Invalid token type', 401);
@@ -154,12 +154,12 @@ export const refreshStudentToken = asyncHandler(
 
       const student = await Student.findById(decoded.id);
 
-      if (!student) {
+      if (!student || (decoded.passwordVersion ?? 0) !== (student.passwordVersion ?? 0)) {
         throw new AppError('Invalid refresh token', 401);
       }
 
       // Generate new access token
-      const newAccessToken = signToken(student._id.toString());
+      const newAccessToken = signToken(student._id.toString(), student.passwordVersion);
 
       const isProduction = req.secure || req.headers['x-forwarded-proto'] === 'https';
       res.cookie('studentJwt', newAccessToken, {
@@ -206,13 +206,48 @@ export const getProfile = asyncHandler(
  * @route   PATCH /api/v1/students/me
  * @access  Private (Student)
  */
+export const updateStudentRole = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const student = await Student.findById(req.params.id).select('+adminUser');
+    if (!student) throw new AppError('Student not found', 404);
+
+    const role = req.body.role;
+    if (role !== 'admin' && role !== 'student') throw new AppError('Invalid student role', 400);
+    if (student.adminUser?.toString() === req.user?._id.toString()) {
+      throw new AppError('You cannot change your own administrator access', 403);
+    }
+
+    let adminUser = student.adminUser;
+    if (role === 'admin') {
+      const email = `student-${student._id.toString()}@accounts.comes.invalid`;
+      let administrator = adminUser
+        ? await User.findById(adminUser).select('+isActive')
+        : await User.findOne({ studentAccount: student._id }).select('+isActive');
+      if (!administrator) {
+        const password = crypto.randomBytes(48).toString('base64url');
+        administrator = await User.create({ name: student.name, email, password, passwordConfirm: password, role: 'admin', studentAccount: student._id });
+      }
+      if (!administrator.isActive || administrator.role !== 'admin') {
+        throw new AppError('The linked administrator account is disabled or no longer an admin', 409);
+      }
+      adminUser = administrator._id;
+    }
+
+    const updated = await Student.findByIdAndUpdate(student._id, {
+      $set: { role, ...(adminUser ? { adminUser } : {}) },
+    }, { new: true, runValidators: true });
+    res.status(200).json({ success: true, message: 'Student access updated', data: { student: updated } });
+  }
+);
+
 export const updateProfile = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
-    // Fields that cannot be updated
-    const disallowedFields = ['password', 'email', 'registrationNo', 'batch'];
-    disallowedFields.forEach((field) => delete req.body[field]);
+    const allowedFields = ['name', 'username', 'contactNo', 'semester', 'avatar', 'bio', 'skills', 'github', 'linkedin', 'website'];
+    const updates = Object.fromEntries(allowedFields
+      .filter((field) => Object.prototype.hasOwnProperty.call(req.body, field))
+      .map((field) => [field, req.body[field]]));
 
-    const student = await Student.findByIdAndUpdate(req.student?._id, req.body, {
+    const student = await Student.findByIdAndUpdate(req.student?._id, { $set: updates }, {
       new: true,
       runValidators: true,
     });

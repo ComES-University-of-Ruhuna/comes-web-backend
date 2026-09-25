@@ -9,6 +9,7 @@ import {
   refreshStudentToken,
   getProfile,
   updateProfile,
+  updateStudentRole,
   verifyEmail,
   getAllStudents,
   searchStudents,
@@ -23,8 +24,9 @@ import {
   sendNotificationToAllStudents,
 } from '../controllers/student.controller';
 import { protect, restrictTo, protectStudent } from '../middleware/auth.middleware';
-import { validate } from '../middleware/validation.middleware';
-import { body } from 'express-validator';
+import { validate, authValidations } from '../middleware/validation.middleware';
+import { studentPasswordRecovery } from '../controllers/passwordRecovery.controller';
+import { body, param } from 'express-validator';
 
 const router = Router();
 
@@ -63,12 +65,18 @@ const studentValidation = {
 // Public routes
 router.post('/register', validate(studentValidation.register), register);
 router.post('/login', validate(studentValidation.login), login);
+router.post('/forgot-password', validate(authValidations.forgotPassword), studentPasswordRecovery.forgotPassword);
+router.patch('/reset-password/:token', validate(authValidations.resetPassword), studentPasswordRecovery.resetPassword);
 router.post('/refresh-token', refreshStudentToken);
 router.get('/verify-email/:token', verifyEmail);
 router.get('/portfolio/:username', getStudentPortfolio);
 
 // Admin routes (must be before protectStudent middleware)
 router.get('/', protect, restrictTo('admin'), getAllStudents);
+router.patch('/:id/role', protect, restrictTo('admin'), validate([
+  param('id').isMongoId().withMessage('Invalid student ID'),
+  body('role').isIn(['student', 'admin']).withMessage('Invalid student role'),
+]), updateStudentRole);
 router.delete('/:id', protect, restrictTo('admin'), deleteStudentByAdmin);
 router.post('/notify', protect, restrictTo('admin'), sendNotificationToStudent);
 router.post('/notify-all', protect, restrictTo('admin'), sendNotificationToAllStudents);

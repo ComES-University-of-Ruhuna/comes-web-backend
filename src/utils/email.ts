@@ -11,6 +11,7 @@ interface EmailOptions {
   subject: string;
   text?: string;
   html?: string;
+  sensitive?: boolean;
 }
 
 interface EmailTemplate {
@@ -18,6 +19,10 @@ interface EmailTemplate {
   html: string;
   text: string;
 }
+
+const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (character) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+})[character]!);
 
 // Create transporter
 const createTransporter = () => {
@@ -39,14 +44,13 @@ const createTransporter = () => {
 
 // Send email
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
-  const transporter = createTransporter();
-  
-  if (!transporter) {
-    logger.warn('Email not sent - transporter not configured');
-    return false;
-  }
-
   try {
+    const transporter = createTransporter();
+    if (!transporter) {
+      logger.warn('Email not sent - transporter not configured');
+      return false;
+    }
+
     const mailOptions = {
       from: config.email.from,
       to: options.to,
@@ -59,7 +63,7 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     logger.info(`Email sent: ${info.messageId}`);
     return true;
   } catch (error) {
-    logger.error('Error sending email:', error);
+    logger.error('Error sending email:', options.sensitive ? undefined : error);
     return false;
   }
 };
@@ -131,9 +135,9 @@ export const emailTemplates = {
               <h1>Password Reset</h1>
             </div>
             <div class="content">
-              <p>Hi ${name},</p>
+              <p>Hi ${escapeHtml(name)},</p>
               <p>You requested a password reset for your ComES account.</p>
-              <p>Click the button below to reset your password. This link is valid for 10 minutes.</p>
+              <p>Confirm this request to receive a new randomly generated password by email. This link is valid for 10 minutes.</p>
               <p style="text-align: center; margin: 30px 0;">
                 <a href="${resetUrl}" class="btn">Reset Password</a>
               </p>
@@ -146,7 +150,13 @@ export const emailTemplates = {
         </body>
       </html>
     `,
-    text: `Hi ${name},\n\nYou requested a password reset. Visit this link to reset your password: ${resetUrl}\n\nThis link is valid for 10 minutes.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nComES Team`,
+    text: `Hi ${name},\n\nConfirm your password reset to receive a new randomly generated password by email: ${resetUrl}\n\nThis link is valid for 10 minutes. Your current password will not change until you confirm.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nComES Team`,
+  }),
+
+  generatedPassword: (name: string, password: string): EmailTemplate => ({
+    subject: 'Your new ComES password',
+    html: `<p>Hi ${escapeHtml(name)},</p><p>Your password has been reset.</p><p>Your new password:</p><p><strong>${escapeHtml(password)}</strong></p><p>Sign in with this password and change it in your account settings. Do not forward this email or share your password.</p>`,
+    text: `Hi ${name},\n\nYour password has been reset.\n\nYour new password: ${password}\n\nSign in with this password and change it in your account settings. Do not forward this email or share your password.`,
   }),
 
   contactConfirmation: (name: string): EmailTemplate => ({

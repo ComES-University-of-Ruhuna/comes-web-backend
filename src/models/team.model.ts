@@ -9,6 +9,7 @@ export interface ITeamMember extends Document {
   user?: mongoose.Types.ObjectId;
   name: string;
   email?: string;
+  contactNo?: string;
   role: string;
   department: string;
   batch: string;
@@ -43,6 +44,7 @@ const teamMemberSchema = new Schema<ITeamMember>(
       trim: true,
       lowercase: true,
     },
+    contactNo: { type: String, trim: true, maxlength: 30 },
     role: {
       type: String,
       required: [true, 'Role is required'],

@@ -12,7 +12,7 @@ import {
   deleteMember,
   reorderMembers,
 } from '../controllers/team.controller';
-import { protect, restrictTo } from '../middleware/auth.middleware';
+import { protect, restrictTo, optionalAuth } from '../middleware/auth.middleware';
 import { validate, commonValidations } from '../middleware/validation.middleware';
 import { body } from 'express-validator';
 
@@ -43,9 +43,9 @@ const teamValidation = {
 };
 
 // Public routes
-router.get('/', getAllMembers);
+router.get('/', optionalAuth, getAllMembers);
 router.get('/department/:department', getMembersByDepartment);
-router.get('/:id', validate(commonValidations.mongoId('id')), getMember);
+router.get('/:id', optionalAuth, validate(commonValidations.mongoId('id')), getMember);
 
 // Admin only routes
 router.post(

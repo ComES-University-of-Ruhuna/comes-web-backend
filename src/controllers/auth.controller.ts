@@ -4,21 +4,21 @@
 
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 import { User, IUser } from '../models';
 import { asyncHandler, AppError, AuthenticationError, sendEmail, emailTemplates, logger } from '../utils';
 import config from '../config';
+import { userPasswordRecovery } from './passwordRecovery.controller';
 
 // Generate JWT token
-const signToken = (id: string): string => {
-  return jwt.sign({ id }, config.jwt.secret as jwt.Secret, {
+const signToken = (id: string, passwordVersion = 0): string => {
+  return jwt.sign({ id, passwordVersion }, config.jwt.secret as jwt.Secret, {
     expiresIn: config.jwt.expiresIn,
   } as jwt.SignOptions);
 };
 
 // Generate refresh token
-const signRefreshToken = (id: string): string => {
-  return jwt.sign({ id }, config.jwt.refreshSecret as jwt.Secret, {
+const signRefreshToken = (id: string, passwordVersion = 0): string => {
+  return jwt.sign({ id, passwordVersion }, config.jwt.refreshSecret as jwt.Secret, {
     expiresIn: config.jwt.refreshExpiresIn,
   } as jwt.SignOptions);
 };
@@ -30,8 +30,8 @@ const createSendToken = (
   req: Request,
   res: Response
 ): void => {
-  const token = signToken(user._id.toString());
-  const refreshToken = signRefreshToken(user._id.toString());
+  const token = signToken(user._id.toString(), user.passwordVersion);
+  const refreshToken = signRefreshToken(user._id.toString(), user.passwordVersion);
 
   // Cookie options
   const isProduction = req.secure || req.headers['x-forwarded-proto'] === 'https';
@@ -118,9 +118,9 @@ export const login = asyncHandler(
     }
 
     // Check if user exists && password is correct
-    const user = await User.findOne({ email }).select('+password +isActive');
+    const user = await User.findOne({ email }).select('+password +isActive +studentAccount');
 
-    if (!user || !(await user.correctPassword(password, user.password))) {
+    if (!user || user.studentAccount || !(await user.correctPassword(password, user.password))) {
       throw new AuthenticationError('Incorrect email or password');
     }
 
@@ -173,15 +173,15 @@ export const refreshToken = asyncHandler(
     }
 
     try {
-      const decoded = jwt.verify(refreshToken, config.jwt.refreshSecret) as { id: string };
+      const decoded = jwt.verify(refreshToken, config.jwt.refreshSecret) as { id: string; passwordVersion?: number };
       const user = await User.findById(decoded.id);
 
-      if (!user) {
+      if (!user || (decoded.passwordVersion ?? 0) !== (user.passwordVersion ?? 0)) {
         throw new AuthenticationError('Invalid refresh token');
       }
 
       // Generate new access token
-      const newAccessToken = signToken(user._id.toString());
+      const newAccessToken = signToken(user._id.toString(), user.passwordVersion);
 
       const isProduction = req.secure || req.headers['x-forwarded-proto'] === 'https';
       res.cookie('jwt', newAccessToken, {
@@ -208,92 +208,14 @@ export const refreshToken = asyncHandler(
  * @route   POST /api/v1/auth/forgot-password
  * @access  Public
  */
-export const forgotPassword = asyncHandler(
-  async (req: Request, res: Response): Promise<void> => {
-    const { email } = req.body;
-
-    const user = await User.findOne({ email });
-
-    // Always return success to prevent email enumeration
-    if (!user) {
-      res.status(200).json({
-        success: true,
-        message: 'If an account with that email exists, a password reset link has been sent.',
-      });
-      return;
-    }
-
-    // Generate reset token
-    const resetToken = user.createPasswordResetToken();
-    await user.save({ validateBeforeSave: false });
-
-    // Create reset URL
-    const resetUrl = `${config.frontendUrl}/reset-password/${resetToken}`;
-
-    // Send email
-    const template = emailTemplates.passwordReset(user.name, resetUrl);
-    const emailSent = await sendEmail({
-      to: email,
-      subject: template.subject,
-      html: template.html,
-      text: template.text,
-    });
-
-    if (!emailSent) {
-      user.passwordResetToken = undefined;
-      user.passwordResetExpires = undefined;
-      await user.save({ validateBeforeSave: false });
-
-      throw new AppError('There was an error sending the email. Please try again later.', 500);
-    }
-
-    logger.info(`Password reset email sent to: ${email}`);
-
-    res.status(200).json({
-      success: true,
-      message: 'If an account with that email exists, a password reset link has been sent.',
-    });
-  }
-);
+export const forgotPassword = userPasswordRecovery.forgotPassword;
 
 /**
  * @desc    Reset password
  * @route   PATCH /api/v1/auth/reset-password/:token
  * @access  Public
  */
-export const resetPassword = asyncHandler(
-  async (req: Request, res: Response): Promise<void> => {
-    const { token } = req.params;
-    const { password, passwordConfirm } = req.body;
-
-    // Hash token
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(token)
-      .digest('hex');
-
-    // Find user with valid token
-    const user = await User.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: Date.now() },
-    });
-
-    if (!user) {
-      throw new AppError('Token is invalid or has expired', 400);
-    }
-
-    // Update password
-    user.password = password;
-    user.passwordConfirm = passwordConfirm;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    await user.save();
-
-    logger.info(`Password reset successful for: ${user.email}`);
-
-    createSendToken(user, 200, req, res);
-  }
-);
+export const resetPassword = userPasswordRecovery.resetPassword;
 
 /**
  * @desc    Update password (for logged in users)

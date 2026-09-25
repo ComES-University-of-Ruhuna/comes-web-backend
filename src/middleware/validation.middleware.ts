@@ -5,12 +5,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult, ValidationChain, body, param, query } from 'express-validator';
 import { ValidationError } from '../utils/errors';
+import { asyncHandler } from '../utils/asyncHandler';
 
 /**
  * Middleware to handle validation results
  */
 export const validate = (validations: ValidationChain[]) => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     // Run all validations
     await Promise.all(validations.map((validation) => validation.run(req)));
 
@@ -29,7 +30,7 @@ export const validate = (validations: ValidationChain[]) => {
     });
 
     throw new ValidationError('Validation failed', formattedErrors);
-  };
+  });
 };
 
 // ============================================
@@ -118,14 +119,7 @@ export const authValidations = {
   ],
 
   resetPassword: [
-    ...commonValidations.password('password'),
-    body('passwordConfirm')
-      .custom((value, { req }) => {
-        if (value !== req.body.password) {
-          throw new Error('Passwords do not match');
-        }
-        return true;
-      }),
+    param('token').matches(/^[a-f0-9]{64}$/).withMessage('Invalid password reset link'),
   ],
 
   updatePassword: [

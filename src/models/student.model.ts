@@ -12,6 +12,8 @@ export interface IStudent extends Document {
   name: string;
   email: string;
   password: string;
+  role: 'student' | 'admin';
+  adminUser?: mongoose.Types.ObjectId;
   username: string;
   registrationNo: string;
   batch: string;
@@ -28,6 +30,8 @@ export interface IStudent extends Document {
   emailVerificationExpires?: Date;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
+  passwordChangedAt?: Date;
+  passwordVersion?: number;
   registeredEvents: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
@@ -38,6 +42,8 @@ export interface IStudent extends Document {
 
 const studentSchema = new Schema<IStudent>(
   {
+    role: { type: String, enum: ['student', 'admin'], default: 'student' },
+    adminUser: { type: Schema.Types.ObjectId, ref: 'User', select: false },
     name: {
       type: String,
       required: [true, 'Please provide your name'],
@@ -138,6 +144,8 @@ const studentSchema = new Schema<IStudent>(
     emailVerificationExpires: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
+    passwordChangedAt: Date,
+    passwordVersion: { type: Number, default: 0 },
     registeredEvents: [{
       type: Schema.Types.ObjectId,
       ref: 'Event',

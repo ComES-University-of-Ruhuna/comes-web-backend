@@ -132,12 +132,34 @@ backend/
 | `JWT_EXPIRES_IN` | JWT expiration time | `7d` |
 | `JWT_REFRESH_SECRET` | Refresh token secret | - |
 | `JWT_REFRESH_EXPIRES_IN` | Refresh token expiration | `30d` |
-| `FRONTEND_URL` | Frontend URL for CORS | `http://localhost:5173` |
-| `EMAIL_HOST` | SMTP host | - |
-| `EMAIL_PORT` | SMTP port | - |
-| `EMAIL_USER` | SMTP username | - |
-| `EMAIL_PASS` | SMTP password | - |
+| `FRONTEND_URL` | Frontend URL for CORS and password recovery links | `http://localhost:5173` |
+| `SMTP_HOST` | SMTP host | `smtp.gmail.com` |
+| `SMTP_PORT` | SMTP port | `587` |
+| `SMTP_USER` | SMTP username | - |
+| `SMTP_PASS` | SMTP password or provider app password | - |
 | `EMAIL_FROM` | Default from address | - |
+
+### Executive Committee Details
+
+Administrators, including authorized student admins, manage committee records at **Admin > Committee & Team** (`/admin/team`). Select the Executive Committee department to edit names, positions, photos, biographies, contact details, social links, display order, term dates, and visibility. Inactive records remain available in the admin list for reactivation but are excluded from public lists and public detail requests.
+
+The public `/team` page reads saved, active API records rather than hard-coded profiles. Before deploying this frontend change, publish the desired committee records. The Add Member editor offers the previous executive roster as optional starting entries; select a member, supply the batch and correct term dates, then save. Other team and advisor records can be added directly. No existing profiles are automatically imported and no database records are changed by loading the editor.
+
+`GET /api/v1/team?includeInactive=true` includes inactive records only when authenticated as an admin. All create, update, delete, and reorder operations remain admin-only.
+
+### Student Administrators
+
+An existing administrator can grant or remove student admin access in **Admin > Members** using the shield control. Students default to the `student` role; registration and profile updates cannot grant permissions. After a grant, the student can reload or sign in again to see the **Student / Admin** dashboard switch. No separate admin password is needed.
+
+`PATCH /api/v1/students/:id/role` accepts `{ "role": "admin" }` or `{ "role": "student" }` and requires administrator authorization. Self-demotion is blocked. Removing access takes effect on the next admin API request while preserving the student account and existing content.
+
+Each student admin has an internal User record to preserve existing content ownership references. Its reserved `@accounts.comes.invalid` address is not a delivery address, and direct user login/token authorization is blocked for these records. Admin API requests validate the student session, current student role, and linked administrator status. Do not manually promote students by editing only the role field; use the endpoint so the ownership link is created.
+
+### Password Recovery
+
+Both login screens offer password recovery. A request sends a single-use confirmation link valid for 10 minutes. The current password stays unchanged until the owner confirms the link. Confirmation generates a cryptographically random password, stores its bcrypt hash, revokes existing sessions, and emails the new password. The API never returns the password or automatically signs the user in. Users should change the emailed password after signing in.
+
+Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`, and the public `FRONTEND_URL` before enabling recovery in production. Missing SMTP credentials prevent email delivery. If sending the generated password fails, the previous password is restored unless another password change has already occurred; request a new recovery link to retry. Recovery requests are IP-rate-limited and have a one-minute per-account email cooldown. Unknown emails receive the same response as registered emails.
 
 ## 📚 API Endpoints
 
@@ -149,7 +171,9 @@ backend/
 | POST | `/api/v1/auth/logout` | Logout user |
 | POST | `/api/v1/auth/refresh-token` | Refresh access token |
 | POST | `/api/v1/auth/forgot-password` | Request password reset |
-| PATCH | `/api/v1/auth/reset-password/:token` | Reset password |
+| PATCH | `/api/v1/auth/reset-password/:token` | Confirm reset and email a random password (no password body) |
+| POST | `/api/v1/students/forgot-password` | Request student password reset |
+| PATCH | `/api/v1/students/reset-password/:token` | Confirm student reset and email a random password |
 | PATCH | `/api/v1/auth/update-password` | Update password (protected) |
 | GET | `/api/v1/auth/me` | Get current user (protected) |
 
