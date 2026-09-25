@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { Event, Student } from '../models';
+import { uploadImage } from '../utils/imageUpload';
 import {
   asyncHandler,
   AppError,
@@ -50,6 +51,14 @@ const accessFilter = (req: Request): Record<string, unknown> => {
     },
   };
 };
+
+export const uploadEventImage = asyncHandler(async (req, res) => {
+  const filter = req.user?.role === 'admin' ? null : accessFilter(req);
+  if (filter && !(await Event.exists(filter))) throw new NotFoundError('Managed event');
+  const url = await uploadImage(req, res, 'comes/events');
+  if (filter && !(await Event.exists(filter))) throw new NotFoundError('Managed event');
+  res.status(201).json({ success: true, data: { url } });
+});
 
 export const searchCommitteeMembers = asyncHandler(async (req, res) => {
   const search =

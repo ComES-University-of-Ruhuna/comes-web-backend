@@ -1,8 +1,10 @@
 jest.mock('../dist/models', () => ({
-  Event: { find: jest.fn(), findOne: jest.fn(), findOneAndUpdate: jest.fn(), findById: jest.fn() },
+  Event: { find: jest.fn(), findOne: jest.fn(), findOneAndUpdate: jest.fn(), findById: jest.fn(), exists: jest.fn() },
   Student: { exists: jest.fn(), find: jest.fn() },
 }));
 const { Event, Student } = require('../dist/models');
+jest.mock('../dist/utils/imageUpload', () => ({ uploadImage: jest.fn() }));
+const { uploadImage } = require('../dist/utils/imageUpload');
 const handlers = require('../dist/controllers/eventCommittee.controller');
 const { validationResult } = require('express-validator');
 const {
@@ -12,7 +14,7 @@ const {
 
 const invoke = (handler, request) =>
   new Promise((resolve) => {
-    handler(request, { json: (body) => resolve({ body }) }, (error) =>
+    handler(request, { status: jest.fn().mockReturnThis(), json: (body) => resolve({ body }) }, (error) =>
       resolve({ error })
     );
   });
@@ -34,6 +36,33 @@ beforeEach(() => {
   Event.findOne.mockReturnValue(query({ _id: eventId }));
   Event.findOneAndUpdate.mockReturnValue(query({ _id: eventId }));
   Student.exists.mockResolvedValue({ _id: memberId });
+});
+
+test('event image upload is restricted to the assigned chair and uses the events folder', async () => {
+  Event.exists.mockResolvedValue({ _id: eventId });
+  uploadImage.mockResolvedValue('https://res.cloudinary.com/comes/image/upload/event.jpg');
+  const { body } = await invoke(handlers.uploadEventImage, request());
+  expect(body.data.url).toContain('event.jpg');
+  expect(Event.exists).toHaveBeenCalledTimes(2);
+  expect(Event.exists).toHaveBeenCalledWith({ _id: eventId, organizingCommittee: { $elemMatch: { member: chairId, isChair: true } } });
+  expect(uploadImage).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'comes/events');
+});
+
+test('revoked or unrelated chairs cannot start an image upload', async () => {
+  Event.exists.mockResolvedValue(null);
+  expect((await invoke(handlers.uploadEventImage, request())).error.statusCode).toBe(404);
+  expect(uploadImage).not.toHaveBeenCalled();
+});
+
+test('chair access revoked during upload prevents returning the uploaded image', async () => {
+  Event.exists.mockResolvedValueOnce({ _id: eventId }).mockResolvedValueOnce(null);
+  uploadImage.mockResolvedValue('https://res.cloudinary.com/comes/image/upload/event.jpg');
+  expect((await invoke(handlers.uploadEventImage, request())).error.statusCode).toBe(404);
+});
+
+test('image upload without an authenticated admin or student is denied', async () => {
+  expect((await invoke(handlers.uploadEventImage, { params: {} })).error.statusCode).toBe(403);
+  expect(uploadImage).not.toHaveBeenCalled();
 });
 
 test('private committee data is excluded from public event queries', () => {
@@ -189,11 +218,12 @@ test('chair routes use student authentication and do not expose assignment write
       index > authIndex && layer.route?.path.startsWith('/organized-events')
   );
   expect(authIndex).toBeGreaterThan(-1);
-  expect(routes).toHaveLength(4);
+  expect(routes).toHaveLength(5);
+  expect(routes.filter(({ route }) => route.methods.post).map(({ route }) => route.path)).toEqual(['/organized-events/:id/image']);
   expect(
     routes.some(
       ({ route }) =>
-        route.methods.put || route.methods.delete || route.methods.post
+        route.methods.put || route.methods.delete
     )
   ).toBe(false);
 });

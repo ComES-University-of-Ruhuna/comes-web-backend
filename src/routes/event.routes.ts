@@ -16,7 +16,7 @@ import {
 } from '../controllers/event.controller';
 import { protect, restrictTo } from '../middleware/auth.middleware';
 import { validate, eventValidations, commonValidations } from '../middleware/validation.middleware';
-import { getPublicEventCommittee, getEventCommittee, searchCommitteeMembers, saveCommitteeMember, removeCommitteeMember, updateMemberContributions } from '../controllers/eventCommittee.controller';
+import { getPublicEventCommittee, getEventCommittee, searchCommitteeMembers, saveCommitteeMember, removeCommitteeMember, updateMemberContributions, uploadEventImage } from '../controllers/eventCommittee.controller';
 import { committeeEventId, committeeMemberId, committeeAssignment, committeeContributions } from '../middleware/eventCommittee.validation';
 
 const router = Router();
@@ -49,6 +49,7 @@ router.delete(
 );
 
 // Admin only routes
+router.post('/image', protect, restrictTo('admin'), uploadEventImage);
 router.post(
   '/',
   protect,

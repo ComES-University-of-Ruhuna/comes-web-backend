@@ -27,7 +27,7 @@ import { protect, restrictTo, protectStudent } from '../middleware/auth.middlewa
 import { validate, authValidations } from '../middleware/validation.middleware';
 import { studentPasswordRecovery } from '../controllers/passwordRecovery.controller';
 import { body, param } from 'express-validator';
-import { getOrganizedEvents, getEventCommittee, updateOrganizedEvent, updateMemberContributions } from '../controllers/eventCommittee.controller';
+import { getOrganizedEvents, getEventCommittee, updateOrganizedEvent, updateMemberContributions, uploadEventImage } from '../controllers/eventCommittee.controller';
 import { committeeEventId, committeeContributions, organizedEventDetails } from '../middleware/eventCommittee.validation';
 
 const router = Router();
@@ -88,6 +88,7 @@ router.use(protectStudent);
 
 router.get('/organized-events', getOrganizedEvents);
 router.get('/organized-events/:id', validate(committeeEventId), getEventCommittee);
+router.post('/organized-events/:id/image', validate(committeeEventId), uploadEventImage);
 router.patch('/organized-events/:id', validate(organizedEventDetails), updateOrganizedEvent);
 router.patch('/organized-events/:id/committee/:memberId/contributions', validate(committeeContributions), updateMemberContributions);
 

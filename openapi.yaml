@@ -868,6 +868,57 @@ paths:
           description: User deleted
 
   # ── Events ───────────────────────────────────────────
+  /events/image:
+    post:
+      tags: [Events]
+      summary: Upload an event image to Cloudinary (admin)
+      description: Accepts one JPEG, PNG, or WebP image up to 3 MB. The editor crops locally before upload. Returns the public URL without modifying an event; save it in the event image field.
+      security:
+        - bearerAuth: []
+      requestBody:
+        $ref: '#/paths/~1team~1avatar/post/requestBody'
+      responses:
+        '201':
+          $ref: '#/paths/~1team~1avatar/post/responses/201'
+        '400':
+          description: Missing, invalid, or oversized image
+        '401':
+          description: Authentication required
+        '403':
+          description: Administrator access required
+        '502':
+          description: Cloudinary upload failed
+        '503':
+          description: Cloudinary is not configured
+
+  /students/organized-events/{id}/image:
+    post:
+      tags: [Events]
+      summary: Upload an image for an event managed by the current chair
+      description: Requires a student token and current chair assignment for this event. Access is checked before upload and again before returning the URL. Upload limits and response match the administrator endpoint.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        $ref: '#/paths/~1team~1avatar/post/requestBody'
+      responses:
+        '201':
+          $ref: '#/paths/~1team~1avatar/post/responses/201'
+        '400':
+          description: Invalid event ID or image upload
+        '401':
+          description: Student authentication required
+        '404':
+          description: Event does not exist or chair access is absent or revoked
+        '502':
+          description: Cloudinary upload failed
+        '503':
+          description: Cloudinary is not configured
+
   /events:
     get:
       tags: [Events]

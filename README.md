@@ -12,10 +12,16 @@ Event editors support an optional HTTP/HTTPS image URL and end date/time (send `
 
 Registration defaults to `registrationMode: "platform"`. Admins and assigned chairs can select `"custom"` with an HTTP/HTTPS `registrationUrl`; submit both fields when changing a custom link. Switching to platform sends an empty URL. Custom links open in a new tab on public and student pages, and custom-link events reject platform enrollment requests. Existing status, date, and capacity restrictions still apply; external registrations are not synchronized into platform counts.
 
+Admins and assigned chairs can choose **Upload event image**, position the image, select its aspect ratio, zoom, rotate, and reset the crop before choosing **Crop & upload**. JPEG, PNG, and WebP source files up to 3 MB and 24 megapixels are supported. The browser exports the crop as JPEG (transparent areas become white), capped at 1920 pixels on the longest edge, then uploads that file to Cloudinary's `comes/events` folder. Both image endpoints accept one multipart `image` and return `{ success: true, data: { url } }`. The URL is saved to the event only when the event form is submitted. Cancelling a crop or a failed upload preserves the previous image; uploaded Cloudinary assets are not automatically deleted when an image is removed or the editor is cancelled.
+
+Event uploads use the same backend-only `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` settings as committee photos. No new environment variables or unsigned preset are required. The chair endpoint checks current assignment before uploading and before returning the URL; saving event details also rechecks chair access.
+
 All paths below are relative to `/api/v1`:
 
 | Method | Path | Access |
 | --- | --- | --- |
+| POST | `/events/image` | Admin; crop image upload for new or existing events |
+| POST | `/students/organized-events/:id/image` | Currently assigned chair; event image upload |
 | GET | `/events/committee-members?search=...` | Admin; limited student name/registration/username search |
 | GET | `/events/:id/committee` | Admin; event and populated committee |
 | PUT | `/events/:id/committee/:memberId` | Admin; `{role, team, isChair}`; preserves contributions |
@@ -164,7 +170,7 @@ backend/
 | `SMTP_USER` | SMTP username | - |
 | `SMTP_PASS` | SMTP password or provider app password | - |
 | `EMAIL_FROM` | Default from address | - |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary product environment cloud name for committee photos | - |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary product environment cloud name for committee and event images | - |
 | `CLOUDINARY_API_KEY` | Cloudinary API key (backend only) | - |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret (backend only) | - |
 

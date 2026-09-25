@@ -67,6 +67,7 @@ describe('committee avatar uploads', () => {
   beforeAll(async () => {
     const app = express();
     app.use('/team', require('../dist/routes/team.routes').default);
+    app.use('/events', require('../dist/routes/event.routes').default);
     app.use((error, req, res, next) => res.status(error.statusCode || 500).json({ message: error.message }));
     await new Promise(resolve => { server = app.listen(0, '127.0.0.1', resolve); });
     endpoint = `http://127.0.0.1:${server.address().port}/team/avatar`;
@@ -94,6 +95,17 @@ describe('committee avatar uploads', () => {
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual({ success: true, data: { url: 'https://res.cloudinary.com/test-cloud/image/upload/photo.png' } });
     expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(expect.objectContaining({ resource_type: 'image', folder: 'comes/team', allowed_formats: ['jpg', 'png', 'webp'] }), expect.any(Function));
+  });
+  test.each([['', 401], ['student', 403], ['moderator', 403], ['admin', 201]])('event image endpoint requires admin access: %s', async (role, code) => {
+    const form = new FormData();
+    form.append('image', new Blob(['photo'], { type: 'image/jpeg' }), 'event.jpg');
+    const response = await fetch(endpoint.replace('/team/avatar', '/events/image'), { method: 'POST', headers: role ? { 'x-test-role': role } : {}, body: form });
+    expect(response.status).toBe(code);
+    if (role === 'admin') {
+      expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(expect.objectContaining({ folder: 'comes/events' }), expect.any(Function));
+    } else {
+      expect(cloudinary.uploader.upload_stream).not.toHaveBeenCalled();
+    }
   });
   test.each([['image/svg+xml', 10], ['image/png', 3 * 1024 * 1024 + 1]])('rejects unsupported or oversized files', async (type, bytes) => {
     expect((await upload('admin', type, bytes)).status).toBe(400);
