@@ -213,6 +213,12 @@ At `/student/profile`, use the camera button to choose a JPEG, PNG, or WebP imag
 
 `POST /api/v1/students/me/avatar` requires a student access token (including linked student admins) and accepts a single multipart `image` with no other fields. It reuses the backend Cloudinary credentials above, uploads to `comes/profiles`, updates only the authenticated student's `avatar`, and returns `{ success: true, data: { student } }`. A standalone staff token cannot select another student's profile. The frontend refreshes its persisted student session from this response. Missing configuration returns 503. Replaced or orphaned Cloudinary assets are not deleted automatically; remove unused assets separately.
 
+### Contact Inbox
+
+Public submissions from `/contact` are saved in MongoDB and appear in **Admin > Contact Messages** at `/admin/contacts`. The inbox is restricted to administrators, including linked student admins. Use refresh to retrieve new submissions, search by name/email/subject, or filter by status; results are paginated with 20 messages per page.
+
+Opening a message marks it read. Status changes, archiving, and confirmed deletion persist through the contact API. **Reply by email** opens the administrator's email app; use the message status selector to mark it replied after sending. Inbox delivery does not require working SMTP credentials: confirmation/notification email failure does not remove the saved submission. Empty and unavailable inboxes are shown separately, with retry for failed requests.
+
 ### Blog and Project Publishing
 
 Admins and authorized student admins manage saved content at `/admin/blog` and `/admin/projects`. Blog posts start as drafts; select **Published** to make an article visible at `/blog` and `/blog/:slug`. Article bodies support Markdown. Draft and archived articles are not publicly readable. Updating an article recalculates its slug and reading time and sets its first publication date.

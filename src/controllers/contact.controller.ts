@@ -71,23 +71,24 @@ export const submitContact = asyncHandler(
  */
 export const getAllContacts = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
     const skip = (page - 1) * limit;
 
     const filter: Record<string, unknown> = {};
 
     // Filter by status
-    if (req.query.status) {
+    if (typeof req.query.status === 'string' && req.query.status) {
       filter.status = req.query.status;
     }
 
     // Search
-    if (req.query.search) {
+    if (typeof req.query.search === 'string' && req.query.search) {
+      const search = req.query.search.slice(0, 200).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { name: { $regex: req.query.search, $options: 'i' } },
-        { email: { $regex: req.query.search, $options: 'i' } },
-        { subject: { $regex: req.query.search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { subject: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -95,7 +96,7 @@ export const getAllContacts = asyncHandler(
       Contact.find(filter)
         .skip(skip)
         .limit(limit)
-        .sort({ createdAt: -1 }),
+        .sort({ createdAt: -1, _id: -1 }),
       Contact.countDocuments(filter),
     ]);
 
