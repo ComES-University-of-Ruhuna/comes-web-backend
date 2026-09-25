@@ -31,6 +31,8 @@ export interface IEvent extends Document {
   type: 'workshop' | 'hackathon' | 'seminar' | 'competition' | 'social' | 'other';
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   image?: string;
+  registrationMode: 'platform' | 'custom';
+  registrationUrl?: string;
   icon?: string;
   maxParticipants?: number;
   registeredCount: number;
@@ -98,6 +100,8 @@ const eventSchema = new Schema<IEvent>(
       default: 'upcoming',
     },
     image: String,
+    registrationMode: { type: String, enum: ['platform', 'custom'], default: 'platform' },
+    registrationUrl: { type: String, trim: true, maxlength: 2000 },
     icon: String,
     maxParticipants: {
       type: Number,

@@ -198,7 +198,7 @@ export const createEvent = asyncHandler(
  */
 export const updateEvent = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const allowedFields = ['title', 'description', 'shortDescription', 'date', 'endDate', 'location', 'type', 'status', 'image', 'icon', 'maxParticipants', 'tags', 'isFeatured'];
+    const allowedFields = ['title', 'description', 'shortDescription', 'date', 'endDate', 'location', 'type', 'status', 'image', 'icon', 'maxParticipants', 'tags', 'isFeatured', 'registrationMode', 'registrationUrl'];
     if (Object.keys(req.body).some((key) => !allowedFields.includes(key))) throw new AppError('Unsupported event fields', 400);
     const event = await Event.findByIdAndUpdate(req.params.id, { $set: req.body }, {
       new: true,
@@ -255,6 +255,10 @@ export const registerForEvent = asyncHandler(
 
     if (event.status !== 'upcoming') {
       throw new AppError('Registration is closed for this event', 400);
+    }
+
+    if (event.registrationMode === 'custom') {
+      throw new AppError('Use the custom registration link for this event', 400);
     }
 
     // Check if already registered

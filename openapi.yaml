@@ -122,6 +122,8 @@ components:
         type:             { type: string, enum: [competition, workshop, other] }
         status:           { type: string, enum: [upcoming, ongoing, completed, cancelled] }
         image:            { type: string }
+        registrationMode: { type: string, enum: [platform, custom], default: platform }
+        registrationUrl:  { type: string, description: "HTTP/HTTPS URL for custom registration" }
         icon:             { type: string }
         maxParticipants:  { type: integer }
         registeredCount:  { type: integer }
@@ -145,6 +147,8 @@ components:
         type:             { type: string, enum: [competition, workshop, other] }
         status:           { type: string, enum: [upcoming, ongoing, completed, cancelled] }
         image:            { type: string }
+        registrationMode: { type: string, enum: [platform, custom], default: platform }
+        registrationUrl:  { type: string, maxLength: 2000, description: "Required HTTP/HTTPS URL when registrationMode is custom; empty for platform" }
         icon:             { type: string }
         maxParticipants:  { type: integer }
         tags:             { type: array, items: { type: string } }

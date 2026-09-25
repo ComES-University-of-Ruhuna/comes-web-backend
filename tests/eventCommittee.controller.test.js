@@ -1,5 +1,5 @@
 jest.mock('../dist/models', () => ({
-  Event: { find: jest.fn(), findOne: jest.fn(), findOneAndUpdate: jest.fn() },
+  Event: { find: jest.fn(), findOne: jest.fn(), findOneAndUpdate: jest.fn(), findById: jest.fn() },
   Student: { exists: jest.fn(), find: jest.fn() },
 }));
 const { Event, Student } = require('../dist/models');
@@ -39,6 +39,38 @@ beforeEach(() => {
 test('private committee data is excluded from public event queries', () => {
   const { Event: Model } = jest.requireActual('../dist/models/event.model');
   expect(Model.schema.path('organizingCommittee').options.select).toBe(false);
+});
+
+test('registration defaults to platform for existing event workflows', () => {
+  const { Event: Model } = jest.requireActual('../dist/models/event.model');
+  expect(new Model().registrationMode).toBe('platform');
+});
+
+test.each(['event', 'student'])('%s registration refuses custom-link events without enrollment', async (controller) => {
+  Event.findById.mockResolvedValue({ status: 'upcoming', registrationMode: 'custom' });
+  const { registerForEvent } = require(`../dist/controllers/${controller}.controller`);
+  const result = await invoke(registerForEvent, { params: { id: eventId, eventId }, student: { _id: memberId } });
+  expect(result.error.statusCode).toBe(400);
+  expect(result.error.message).toBe('Use the custom registration link for this event');
+});
+
+test.each(['create', 'update'])('event %s validates registration mode and custom links', async (operation) => {
+  const { eventValidations } = require('../dist/middleware/validation.middleware');
+  const base = { title: 'Workshop', description: 'A community workshop', location: 'Faculty hall', date: '2099-01-01T10:00:00Z', type: 'workshop' };
+  for (const [fields, valid] of [
+    [{}, true],
+    [{ registrationMode: 'platform', registrationUrl: '' }, true],
+    [{ registrationMode: 'custom', registrationUrl: 'https://forms.example.com/register' }, true],
+    [{ registrationMode: 'custom' }, false],
+    [{ registrationMode: 'custom', registrationUrl: 'javascript:alert(1)' }, false],
+    [{ registrationMode: 'custom', registrationUrl: 'https://user:password@example.com' }, false],
+    [{ registrationMode: 'unknown' }, false],
+    [{ registrationUrl: 'https://example.com' }, false],
+  ]) {
+    const req = { body: { ...base, ...fields } };
+    await Promise.all(eventValidations[operation].map((validation) => validation.run(req)));
+    expect(validationResult(req).isEmpty()).toBe(valid);
+  }
 });
 
 test('public committee exposes only names, roles and teams and omits deleted accounts', async () => {

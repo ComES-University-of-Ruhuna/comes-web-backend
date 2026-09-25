@@ -10,6 +10,8 @@ The public `GET /events/:id/organizers` endpoint returns only each member's name
 
 Event editors support an optional HTTP/HTTPS image URL and end date/time (send `endDate: null` to clear it). When both dates are submitted, the end must be after the start. New categories are Competition, Workshop, and Other. Existing Hackathon, Seminar, and Social records serialize and filter as Competition, Workshop, and Other respectively; no destructive migration is needed.
 
+Registration defaults to `registrationMode: "platform"`. Admins and assigned chairs can select `"custom"` with an HTTP/HTTPS `registrationUrl`; submit both fields when changing a custom link. Switching to platform sends an empty URL. Custom links open in a new tab on public and student pages, and custom-link events reject platform enrollment requests. Existing status, date, and capacity restrictions still apply; external registrations are not synchronized into platform counts.
+
 All paths below are relative to `/api/v1`:
 
 | Method | Path | Access |

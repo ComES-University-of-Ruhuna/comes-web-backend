@@ -437,6 +437,10 @@ export const registerForEvent = asyncHandler(
       throw new AppError('Event not found', 404);
     }
 
+    if (event.registrationMode === 'custom') {
+      throw new AppError('Use the custom registration link for this event', 400);
+    }
+
     // Check if already registered
     const student = await Student.findById(studentId);
     if (!student) {

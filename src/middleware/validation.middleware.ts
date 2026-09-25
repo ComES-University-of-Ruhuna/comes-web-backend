@@ -171,6 +171,17 @@ export const userValidations = {
 // ============================================
 
 const eventMediaAndSchedule = () => [
+  body('registrationMode').optional().isIn(['platform', 'custom']),
+  body('registrationUrl').custom((value, { req }) => {
+    if (req.body.registrationMode === 'custom') {
+      if (typeof value !== 'string' || value.length > 2000) return false;
+      try {
+        const url = new URL(value);
+        return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password;
+      } catch { return false; }
+    }
+    return value === undefined || (req.body.registrationMode === 'platform' && value === '');
+  }).withMessage('Custom registration requires a valid HTTP or HTTPS URL and registration mode'),
   body('endDate').optional({ nullable: true }).isISO8601().bail()
     .custom((value, { req }) => !req.body.date || new Date(value) > new Date(req.body.date))
     .withMessage('End time must be after the start time'),

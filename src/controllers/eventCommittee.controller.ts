@@ -23,6 +23,8 @@ const detailFields = [
   'location',
   'type',
   'image',
+  'registrationMode',
+  'registrationUrl',
   'maxParticipants',
   'status',
 ];
