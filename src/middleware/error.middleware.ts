@@ -22,8 +22,8 @@ const handleCastErrorDB = (err: mongoose.Error.CastError): AppError => {
 };
 
 // Handle MongoDB duplicate key error
-const handleDuplicateFieldsDB = (err: any): AppError => {
-  const value = err.errmsg?.match(/(["'])(\\?.)*?\1/)?.[0] || 'unknown';
+const handleDuplicateFieldsDB = (err: Error): AppError => {
+  const value = err.message.match(/(["'])(\\?.)*?\1/)?.[0] || 'unknown';
   const message = `Duplicate field value: ${value}. Please use another value.`;
   return new AppError(message, 400, 'DUPLICATE_FIELD');
 };
@@ -97,13 +97,18 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ): void => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+
   let error: AppError;
 
   if (err instanceof AppError) {
     error = err;
   } else {
     // Convert unknown errors to AppError
-    error = new AppError(err.message || 'Internal Server Error', 500);
+    error = new AppError(err.message || 'Internal Server Error', 500, 'INTERNAL_ERROR', false);
     error.stack = err.stack;
   }
 
@@ -111,14 +116,14 @@ export const errorHandler = (
   logger.error(`${error.statusCode} - ${error.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
 
   // Handle specific error types
-  if (err.name === 'CastError') {
-    error = handleCastErrorDB(err as mongoose.Error.CastError);
+  if (err instanceof mongoose.Error.CastError) {
+    error = handleCastErrorDB(err);
   }
-  if ((err as any).code === 11000) {
+  if ('code' in err && err.code === 11000) {
     error = handleDuplicateFieldsDB(err);
   }
-  if (err.name === 'ValidationError') {
-    error = handleValidationErrorDB(err as mongoose.Error.ValidationError);
+  if (err instanceof mongoose.Error.ValidationError) {
+    error = handleValidationErrorDB(err);
   }
   if (err.name === 'JsonWebTokenError') {
     error = handleJWTError();

@@ -17,7 +17,7 @@ export const getAllEvents = asyncHandler(
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
 
     // Filter by status
     if (req.query.status) {
@@ -49,7 +49,7 @@ export const getAllEvents = asyncHandler(
     }
 
     // Sorting
-    let sort: any = { date: -1 };
+    let sort: Record<string, 1 | -1> = { date: -1 };
     if (req.query.sort) {
       const sortField = (req.query.sort as string).replace('-', '');
       const sortOrder = (req.query.sort as string).startsWith('-') ? -1 : 1;

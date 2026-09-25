@@ -75,7 +75,7 @@ export const getAllContacts = asyncHandler(
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
 
     // Filter by status
     if (req.query.status) {

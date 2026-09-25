@@ -5,6 +5,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import validator from 'validator';
+import crypto from 'node:crypto';
 
 export interface IStudent extends Document {
   _id: mongoose.Types.ObjectId;
@@ -195,7 +196,6 @@ studentSchema.methods.comparePassword = async function (
 
 // Method to create email verification token
 studentSchema.methods.createEmailVerificationToken = function (): string {
-  const crypto = require('crypto');
   const token = crypto.randomBytes(32).toString('hex');
   
   this.emailVerificationToken = crypto
@@ -210,7 +210,6 @@ studentSchema.methods.createEmailVerificationToken = function (): string {
 
 // Method to create password reset token
 studentSchema.methods.createPasswordResetToken = function (): string {
-  const crypto = require('crypto');
   const token = crypto.randomBytes(32).toString('hex');
   
   this.passwordResetToken = crypto

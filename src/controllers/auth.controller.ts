@@ -70,7 +70,7 @@ const createSendToken = (
  * @access  Public
  */
 export const register = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { name, email, password, passwordConfirm, studentId } = req.body;
 
     // Check if user already exists
@@ -109,7 +109,7 @@ export const register = asyncHandler(
  * @access  Public
  */
 export const login = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { email, password } = req.body;
 
     // Check if email and password exist

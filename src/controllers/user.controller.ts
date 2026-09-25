@@ -17,7 +17,7 @@ export const getAllUsers = asyncHandler(
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
 
     // Filter by role
     if (req.query.role) {
@@ -104,7 +104,7 @@ export const updateMe = asyncHandler(
 
     // Filter allowed fields
     const allowedFields = ['name', 'bio', 'linkedin', 'github', 'avatar'];
-    const filteredBody: any = {};
+    const filteredBody: Record<string, unknown> = {};
     
     Object.keys(req.body).forEach((key) => {
       if (allowedFields.includes(key)) {

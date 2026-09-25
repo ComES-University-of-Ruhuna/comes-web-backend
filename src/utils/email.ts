@@ -184,7 +184,7 @@ export const emailTemplates = {
     text: `Hi ${name},\n\nThank you for reaching out to ComES! We've received your message and will get back to you as soon as possible.\n\nBest regards,\nComES Team`,
   }),
 
-  newsletterWelcome: (email: string): EmailTemplate => ({
+  newsletterWelcome: (_email: string): EmailTemplate => ({
     subject: 'Welcome to ComES Newsletter!',
     html: `
       <!DOCTYPE html>

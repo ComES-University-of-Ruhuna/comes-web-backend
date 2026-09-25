@@ -43,8 +43,8 @@ const questionResponseSchema = new Schema<IQuestionResponse>(
         selectedAnswerIndex: {
             type: Number,
             required: [true, 'Selected answer index is required'],
-            min: [0, 'Answer index must be between 0 and 3'],
-            max: [3, 'Answer index must be between 0 and 3'],
+            min: [-1, 'Answer index must be -1 (unanswered) or between 0 and 3'],
+            max: [3, 'Answer index must be -1 (unanswered) or between 0 and 3'],
         },
         responseTimeSeconds: {
             type: Number,

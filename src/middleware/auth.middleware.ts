@@ -98,7 +98,7 @@ export const optionalAuth = asyncHandler(
     if (token) {
       try {
         const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
-        const currentUser = await User.findById(decoded.id);
+        const currentUser = await User.findById(decoded.id).select('+isActive');
 
         if (currentUser && currentUser.isActive) {
           req.user = currentUser;

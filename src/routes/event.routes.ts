@@ -14,7 +14,7 @@ import {
   registerForEvent,
   unregisterFromEvent,
 } from '../controllers/event.controller';
-import { protect, restrictTo, optionalAuth } from '../middleware/auth.middleware';
+import { protect, restrictTo } from '../middleware/auth.middleware';
 import { validate, eventValidations, commonValidations } from '../middleware/validation.middleware';
 
 const router = Router();

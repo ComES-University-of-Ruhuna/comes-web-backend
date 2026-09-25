@@ -4,13 +4,6 @@
 
 type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
-interface LogMessage {
-  level: LogLevel;
-  message: string;
-  timestamp: string;
-  data?: unknown;
-}
-
 const colors = {
   reset: '\x1b[0m',
   red: '\x1b[31m',

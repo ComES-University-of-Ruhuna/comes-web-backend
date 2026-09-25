@@ -4,6 +4,7 @@
 
 import dotenv from 'dotenv';
 import path from 'path';
+import type { Request, Response } from 'express';
 
 // Load environment variables before anything else
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -47,11 +48,11 @@ const ensureDbConnection = async () => {
 };
 
 // Wrap the app to ensure DB connection
-const handler = async (req: any, res: any) => {
+const handler = async (req: Request, res: Response) => {
   try {
     await ensureDbConnection();
     return app(req, res);
-  } catch (error) {
+  } catch {
     res.status(500).json({
       success: false,
       message: 'Database connection failed',

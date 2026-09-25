@@ -13,14 +13,14 @@ import {
     submitQuizAttempt,
     getQuizAttempts,
 } from '../controllers/quiz.controller';
-import { protect, restrictTo, protectStudent } from '../middleware/auth.middleware';
+import { protect, restrictTo, protectStudent, optionalAuth } from '../middleware/auth.middleware';
 import { validate, quizValidations, commonValidations } from '../middleware/validation.middleware';
 
 const router = Router();
 
 // Public routes - anyone can browse quizzes
-router.get('/', getAllQuizzes);
-router.get('/:id', validate(commonValidations.mongoId('id')), getQuizById);
+router.get('/', optionalAuth, getAllQuizzes);
+router.get('/:id', optionalAuth, validate(commonValidations.mongoId('id')), getQuizById);
 
 // Admin only routes - quiz management
 router.post(

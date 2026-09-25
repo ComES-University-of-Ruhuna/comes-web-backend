@@ -367,10 +367,6 @@ export const quizValidations = {
   ],
 
   submitAttempt: [
-    body('participantName')
-      .trim()
-      .isLength({ min: 2, max: 100 })
-      .withMessage('Participant name must be between 2 and 100 characters'),
     body('responses')
       .isArray({ min: 1 })
       .withMessage('At least one response is required'),
@@ -378,8 +374,8 @@ export const quizValidations = {
       .isMongoId()
       .withMessage('Invalid question ID format'),
     body('responses.*.selectedAnswerIndex')
-      .isInt({ min: 0, max: 3 })
-      .withMessage('Selected answer index must be between 0 and 3'),
+      .isInt({ min: -1, max: 3 })
+      .withMessage('Selected answer index must be -1 (unanswered) or between 0 and 3'),
     body('responses.*.responseTimeSeconds')
       .isFloat({ min: 0 })
       .withMessage('Response time must be a non-negative number'),

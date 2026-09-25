@@ -37,9 +37,7 @@ export interface IUser extends Document {
   createEmailVerificationToken(): string;
 }
 
-interface IUserModel extends Model<IUser> {
-  // Static methods can be added here
-}
+type IUserModel = Model<IUser>;
 
 const userSchema = new Schema<IUser>(
   {
@@ -178,7 +176,7 @@ userSchema.pre<IUser>('save', function (next) {
 // ============================================
 
 // Filter out inactive users by default
-userSchema.pre(/^find/, function (this: mongoose.Query<any, any>, next) {
+userSchema.pre(/^find/, function (this: mongoose.Query<unknown, IUser>, next) {
   // Only apply to find queries, not findOne for specific lookups
   this.find({ isActive: { $ne: false } });
   next();

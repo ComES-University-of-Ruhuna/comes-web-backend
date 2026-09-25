@@ -13,7 +13,7 @@ import { asyncHandler, NotFoundError } from '../utils';
  */
 export const getAllMembers = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const filter: any = { isActive: true };
+    const filter: Record<string, unknown> = { isActive: true };
 
     // Filter by department
     if (req.query.department) {
@@ -30,7 +30,7 @@ export const getAllMembers = asyncHandler(
       .sort({ department: 1, order: 1 });
 
     // Group by department
-    const grouped = members.reduce((acc: any, member) => {
+    const grouped = members.reduce<Record<string, typeof members>>((acc, member) => {
       const dept = member.department;
       if (!acc[dept]) {
         acc[dept] = [];

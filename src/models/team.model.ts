@@ -103,7 +103,7 @@ teamMemberSchema.index({ 'term.start': -1 });
 // ============================================
 
 // Sort by order by default
-teamMemberSchema.pre(/^find/, function (this: mongoose.Query<any, any>, next) {
+teamMemberSchema.pre(/^find/, function (this: mongoose.Query<unknown, ITeamMember>, next) {
   this.sort({ order: 1 });
   next();
 });

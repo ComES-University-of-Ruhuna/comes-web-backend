@@ -83,7 +83,7 @@ backend/
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 20+ (required by Nodemailer)
 - MongoDB (local or Atlas)
 - npm or yarn
 
