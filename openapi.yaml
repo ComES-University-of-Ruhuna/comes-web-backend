@@ -202,6 +202,7 @@ components:
         githubUrl:        { type: string }
         status:           { type: string, enum: [in-progress, completed, archived] }
         team:             { type: array, items: { type: string } }
+        teamMembers:      { type: array, items: { type: string }, description: Optional display names for contributors }
         teamLead:         { type: string }
         startDate:        { type: string, format: date-time }
         endDate:          { type: string, format: date-time }
@@ -226,6 +227,7 @@ components:
         githubUrl:        { type: string }
         status:           { type: string, enum: [in-progress, completed, archived] }
         team:             { type: array, items: { type: string } }
+        teamMembers:      { type: array, items: { type: string } }
         teamLead:         { type: string }
         startDate:        { type: string, format: date-time }
         endDate:          { type: string, format: date-time }
@@ -994,7 +996,19 @@ paths:
     get:
       tags: [Blog]
       summary: Get all blog posts
+      description: Public requests return published articles only. Admins can explicitly include drafts and archived articles with their full content.
+      security:
+        - {}
+        - bearerAuth: []
       parameters:
+        - name: includeDrafts
+          in: query
+          description: Include unpublished articles and content (authenticated admins only).
+          schema: { type: boolean, default: false }
+        - name: search
+          in: query
+          description: Case-insensitive literal text search.
+          schema: { type: string }
         - name: page
           in: query
           schema: { type: integer, default: 1 }
@@ -1006,6 +1020,7 @@ paths:
           schema: { type: string }
         - name: status
           in: query
+          description: Applied only for admins using includeDrafts=true.
           schema: { type: string, enum: [draft, published, archived] }
       responses:
         '200':
@@ -1123,7 +1138,19 @@ paths:
     get:
       tags: [Projects]
       summary: Get all projects
+      description: Public requests exclude archived projects, including when filtering by status.
+      security:
+        - {}
+        - bearerAuth: []
       parameters:
+        - name: includeArchived
+          in: query
+          description: Include archived projects (authenticated admins only).
+          schema: { type: boolean, default: false }
+        - name: search
+          in: query
+          description: Case-insensitive literal text search.
+          schema: { type: string }
         - name: page
           in: query
           schema: { type: integer, default: 1 }

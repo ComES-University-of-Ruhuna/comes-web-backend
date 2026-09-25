@@ -14,7 +14,7 @@ import {
   deleteProject,
   likeProject,
 } from '../controllers/project.controller';
-import { protect, restrictTo } from '../middleware/auth.middleware';
+import { protect, restrictTo, optionalAuth } from '../middleware/auth.middleware';
 import { validate, commonValidations } from '../middleware/validation.middleware';
 import { body } from 'express-validator';
 
@@ -42,11 +42,11 @@ const projectValidation = {
 };
 
 // Public routes
-router.get('/', getAllProjects);
+router.get('/', optionalAuth, getAllProjects);
 router.get('/featured', getFeaturedProjects);
 router.get('/categories', getCategories);
 router.get('/slug/:slug', getProjectBySlug);
-router.get('/:id', validate(commonValidations.mongoId('id')), getProject);
+router.get('/:id', optionalAuth, validate(commonValidations.mongoId('id')), getProject);
 router.post('/:id/like', validate(commonValidations.mongoId('id')), likeProject);
 
 // Admin only routes

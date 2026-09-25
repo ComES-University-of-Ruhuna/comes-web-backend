@@ -18,6 +18,14 @@ export const getAllPosts = asyncHandler(
     const skip = (page - 1) * limit;
 
     const filter: Record<string, unknown> = { status: 'published' };
+    const isAdminList = req.query.includeDrafts === 'true' && req.user?.role === 'admin';
+    if (isAdminList) {
+      if (req.query.status && ['draft', 'published', 'archived'].includes(String(req.query.status))) {
+        filter.status = req.query.status;
+      } else {
+        delete filter.status;
+      }
+    }
 
     // Filter by category
     if (req.query.category) {
@@ -41,10 +49,11 @@ export const getAllPosts = asyncHandler(
 
     // Search
     if (req.query.search) {
+      const search = String(req.query.search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { title: { $regex: req.query.search, $options: 'i' } },
-        { content: { $regex: req.query.search, $options: 'i' } },
-        { excerpt: { $regex: req.query.search, $options: 'i' } },
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } },
+        { excerpt: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -59,7 +68,7 @@ export const getAllPosts = asyncHandler(
     const [posts, total] = await Promise.all([
       BlogPost.find(filter)
         .populate('author', 'name avatar')
-        .select('-content')
+        .select(isAdminList ? '' : '-content')
         .skip(skip)
         .limit(limit)
         .sort(sort),
@@ -160,7 +169,10 @@ export const getTags = asyncHandler(
  */
 export const getPost = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const post = await BlogPost.findById(req.params.id)
+    const post = await BlogPost.findOne({
+      _id: req.params.id,
+      ...(req.user?.role === 'admin' ? {} : { status: 'published' }),
+    })
       .populate('author', 'name avatar bio');
 
     if (!post) {
@@ -187,7 +199,7 @@ export const getPost = asyncHandler(
  */
 export const getPostBySlug = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const post = await BlogPost.findOne({ slug: req.params.slug })
+    const post = await BlogPost.findOne({ slug: req.params.slug, status: 'published' })
       .populate('author', 'name avatar bio');
 
     if (!post) {
@@ -238,14 +250,19 @@ export const createPost = asyncHandler(
  */
 export const updatePost = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const post = await BlogPost.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const post = await BlogPost.findById(req.params.id);
 
     if (!post) {
       throw new NotFoundError('Blog post');
     }
+
+    const fields = ['title', 'content', 'excerpt', 'coverImage', 'category', 'tags', 'status', 'isFeatured'];
+    post.set(Object.fromEntries(
+      fields
+        .filter((field) => Object.prototype.hasOwnProperty.call(req.body, field))
+        .map((field) => [field, req.body[field]])
+    ));
+    await post.save();
 
     res.status(200).json({
       success: true,

@@ -15,7 +15,7 @@ import {
   deletePost,
   likePost,
 } from '../controllers/blog.controller';
-import { protect, restrictTo } from '../middleware/auth.middleware';
+import { protect, restrictTo, optionalAuth } from '../middleware/auth.middleware';
 import { validate, commonValidations } from '../middleware/validation.middleware';
 import { body } from 'express-validator';
 
@@ -44,12 +44,12 @@ const blogValidation = {
 };
 
 // Public routes
-router.get('/', getAllPosts);
+router.get('/', optionalAuth, getAllPosts);
 router.get('/featured', getFeaturedPosts);
 router.get('/categories', getCategories);
 router.get('/tags', getTags);
 router.get('/slug/:slug', getPostBySlug);
-router.get('/:id', validate(commonValidations.mongoId('id')), getPost);
+router.get('/:id', optionalAuth, validate(commonValidations.mongoId('id')), getPost);
 router.post('/:id/like', validate(commonValidations.mongoId('id')), likePost);
 
 // Admin only routes

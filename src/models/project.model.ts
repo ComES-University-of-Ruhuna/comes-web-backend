@@ -19,6 +19,7 @@ export interface IProject extends Document {
   githubUrl?: string;
   status: 'in-progress' | 'completed' | 'archived';
   team: mongoose.Types.ObjectId[];
+  teamMembers?: string[];
   teamLead?: mongoose.Types.ObjectId;
   startDate?: Date;
   endDate?: Date;
@@ -80,6 +81,7 @@ const projectSchema = new Schema<IProject>(
       type: Schema.Types.ObjectId,
       ref: 'User',
     }],
+    teamMembers: { type: [{ type: String, trim: true }], default: undefined },
     teamLead: {
       type: Schema.Types.ObjectId,
       ref: 'User',

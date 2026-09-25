@@ -17,7 +17,8 @@ export const getAllProjects = asyncHandler(
     const limit = parseInt(req.query.limit as string) || 12;
     const skip = (page - 1) * limit;
 
-    const filter: Record<string, unknown> = {};
+    const includeArchived = req.query.includeArchived === 'true' && req.user?.role === 'admin';
+    const filter: Record<string, unknown> = includeArchived ? {} : { status: { $ne: 'archived' } };
 
     // Filter by category
     if (req.query.category) {
@@ -26,7 +27,7 @@ export const getAllProjects = asyncHandler(
 
     // Filter by status
     if (req.query.status) {
-      filter.status = req.query.status;
+      filter.status = includeArchived ? req.query.status : { $eq: req.query.status, $ne: 'archived' };
     }
 
     // Filter featured
@@ -41,10 +42,11 @@ export const getAllProjects = asyncHandler(
 
     // Search
     if (req.query.search) {
+      const search = String(req.query.search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { title: { $regex: req.query.search, $options: 'i' } },
-        { description: { $regex: req.query.search, $options: 'i' } },
-        { technologies: { $in: [new RegExp(req.query.search as string, 'i')] } },
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { technologies: { $in: [new RegExp(search, 'i')] } },
       ];
     }
 
@@ -92,7 +94,7 @@ export const getFeaturedProjects = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const limit = parseInt(req.query.limit as string) || 6;
 
-    const projects = await Project.find({ isFeatured: true })
+    const projects = await Project.find({ isFeatured: true, status: { $ne: 'archived' } })
       .populate('team', 'name avatar')
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -113,7 +115,7 @@ export const getFeaturedProjects = asyncHandler(
  */
 export const getCategories = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const categories = await Project.distinct('category');
+    const categories = await Project.distinct('category', { status: { $ne: 'archived' } });
 
     res.status(200).json({
       success: true,
@@ -131,7 +133,7 @@ export const getCategories = asyncHandler(
  */
 export const getProject = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const project = await Project.findById(req.params.id)
+    const project = await Project.findOne({ _id: req.params.id, ...(req.user?.role === 'admin' ? {} : { status: { $ne: 'archived' } }) })
       .populate('team', 'name avatar bio linkedin github')
       .populate('teamLead', 'name avatar bio linkedin github')
       .populate('createdBy', 'name');
@@ -160,7 +162,7 @@ export const getProject = asyncHandler(
  */
 export const getProjectBySlug = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const project = await Project.findOne({ slug: req.params.slug })
+    const project = await Project.findOne({ slug: req.params.slug, status: { $ne: 'archived' } })
       .populate('team', 'name avatar bio linkedin github')
       .populate('teamLead', 'name avatar bio linkedin github');
 

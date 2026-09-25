@@ -147,6 +147,16 @@ The public `/team` page reads saved, active API records rather than hard-coded p
 
 `GET /api/v1/team?includeInactive=true` includes inactive records only when authenticated as an admin. All create, update, delete, and reorder operations remain admin-only.
 
+### Blog and Project Publishing
+
+Admins and authorized student admins manage saved content at `/admin/blog` and `/admin/projects`. Blog posts start as drafts; select **Published** to make an article visible at `/blog` and `/blog/:slug`. Article bodies support Markdown. Draft and archived articles are not publicly readable. Updating an article recalculates its slug and reading time and sets its first publication date.
+
+Saved projects with **In Progress** or **Completed** status appear at `/projects`; **Archived** hides a project from public lists and details. Enable **Featured** to include a published article or a non-archived project in featured sections. Project contributor names use `teamMembers`; existing linked User records in `team` remain supported.
+
+`GET /api/v1/blog?includeDrafts=true` returns all statuses and article content only to authenticated admins. `GET /api/v1/projects?includeArchived=true` includes archived projects only for admins. Both collections support pagination and literal-text search. Public requests cannot override these visibility rules.
+
+Deploy the backend and frontend together. The editors now persist create, update, and delete operations through the API. Hard-coded blog and project samples are removed without importing them into the database; empty collections stay empty until an admin publishes content.
+
 ### Student Administrators
 
 An existing administrator can grant or remove student admin access in **Admin > Members** using the shield control. Students default to the `student` role; registration and profile updates cannot grant permissions. After a grant, the student can reload or sign in again to see the **Student / Admin** dashboard switch. No separate admin password is needed.
