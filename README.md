@@ -164,6 +164,9 @@ backend/
 | `SMTP_USER` | SMTP username | - |
 | `SMTP_PASS` | SMTP password or provider app password | - |
 | `EMAIL_FROM` | Default from address | - |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary product environment cloud name for committee photos | - |
+| `CLOUDINARY_API_KEY` | Cloudinary API key (backend only) | - |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret (backend only) | - |
 
 ### Executive Committee Details
 
@@ -172,6 +175,14 @@ Administrators, including authorized student admins, manage committee records at
 The public `/team` page reads saved, active API records rather than hard-coded profiles. Before deploying this frontend change, publish the desired committee records. The Add Member editor offers the previous executive roster as optional starting entries; select a member, supply the batch and correct term dates, then save. Other team and advisor records can be added directly. No existing profiles are automatically imported and no database records are changed by loading the editor.
 
 `GET /api/v1/team?includeInactive=true` includes inactive records only when authenticated as an admin. All create, update, delete, and reorder operations remain admin-only.
+
+#### Cloudinary Photos
+
+Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` in the backend `.env` for local development and in the backend hosting environment for production, then restart/redeploy the backend. Get these values from your Cloudinary product environment's API Keys settings. Never put the API secret in frontend/Vite environment variables or commit real credentials. No unsigned upload preset is required.
+
+In **Admin > Committee & Team**, add or edit a member and choose **Upload photo**. JPEG, PNG, and WebP images up to 3 MB are accepted. The admin-only `POST /api/v1/team/avatar` accepts a single multipart `image` file, validates limits, and sends it to Cloudinary's `comes/team` folder. It returns `{ success: true, data: { url } }`. The editor previews the uploaded image; **Add Member** or **Update Member** persists that URL. An existing Cloudinary image URL can also be pasted into **Avatar URL**. Missing Cloudinary configuration returns 503 without affecting other team features.
+
+Uploads occur before the member record is saved. Cancelling the editor, replacing an image, removing a photo, or deleting a member does not delete assets from Cloudinary because URLs may be shared by other records. Remove unused assets separately in Cloudinary. Credentials and upload signing stay on the backend; only the public image URL is returned to the frontend.
 
 ### Blog and Project Publishing
 
@@ -289,6 +300,7 @@ Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`, and 
 | GET | `/api/v1/team/department/:department` | Get members by department |
 | GET | `/api/v1/team/:id` | Get member by ID |
 | POST | `/api/v1/team` | Create member (admin) |
+| POST | `/api/v1/team/avatar` | Upload a committee photo to Cloudinary (admin) |
 | PATCH | `/api/v1/team/:id` | Update member (admin) |
 | DELETE | `/api/v1/team/:id` | Delete member (admin) |
 | PATCH | `/api/v1/team/reorder` | Reorder members (admin) |

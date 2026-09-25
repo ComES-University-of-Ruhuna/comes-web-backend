@@ -11,6 +11,7 @@ import {
   updateMember,
   deleteMember,
   reorderMembers,
+  uploadMemberAvatar,
 } from '../controllers/team.controller';
 import { protect, restrictTo, optionalAuth } from '../middleware/auth.middleware';
 import { validate, commonValidations } from '../middleware/validation.middleware';
@@ -48,6 +49,7 @@ router.get('/department/:department', getMembersByDepartment);
 router.get('/:id', optionalAuth, validate(commonValidations.mongoId('id')), getMember);
 
 // Admin only routes
+router.post('/avatar', protect, restrictTo('admin'), uploadMemberAvatar);
 router.post(
   '/',
   protect,

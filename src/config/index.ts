@@ -33,6 +33,11 @@ interface Config {
     maxFileSize: number;
     path: string;
   };
+  cloudinary: {
+    cloudName: string;
+    apiKey: string;
+    apiSecret: string;
+  };
   frontendUrl: string;
   adminEmail: string;
 }
@@ -62,6 +67,11 @@ const config: Config = {
   upload: {
     maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10),
     path: process.env.UPLOAD_PATH || './uploads',
+  },
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    apiKey: process.env.CLOUDINARY_API_KEY || '',
+    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
   },
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   adminEmail: process.env.ADMIN_EMAIL || 'admin@comes.lk',

@@ -1541,6 +1541,49 @@ paths:
         '201':
           description: Member created
 
+  /team/avatar:
+    post:
+      tags: [Team]
+      summary: Upload a committee photo to Cloudinary (admin)
+      description: Accepts one JPEG, PNG, or WebP image up to 3 MB. Returns its public HTTPS URL without updating any member record. Requires backend Cloudinary configuration.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              additionalProperties: false
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Photo uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      url: { type: string, format: uri }
+        '400':
+          description: Missing, unsupported, oversized, or malformed image upload
+        '401':
+          description: Authentication required
+        '403':
+          description: Administrator access required
+        '502':
+          description: Cloudinary upload failed
+        '503':
+          description: Cloudinary is not configured
+
   /team/department/{department}:
     get:
       tags: [Team]
