@@ -14,3 +14,4 @@ export { default as studentRoutes } from './student.routes';
 export { default as competitionTeamRoutes } from './competitionTeam.routes';
 export { default as analyticsRoutes } from './analytics.routes';
 export { default as quizRoutes } from './quiz.routes';
+export { default as galleryRoutes } from './gallery.routes';

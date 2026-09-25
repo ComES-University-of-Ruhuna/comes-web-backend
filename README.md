@@ -184,6 +184,23 @@ The public `/team` page reads saved, active API records rather than hard-coded p
 
 #### Cloudinary Photos
 
+#### Event Gallery
+
+The public `/gallery` page reads saved gallery records, not sample data or event cover images. In **Admin > Gallery**, select an event, choose up to 20 photographs, edit titles/captions, and select **Save photos**. Each JPEG, PNG, or WebP file must be at most 3 MiB. Uploads run sequentially, preserving original framing. Clear **Publish photos** to save drafts; published images appear immediately in the public event-filtered archive. Admins can edit captions, publish/unpublish, and confirm removal from the gallery.
+
+Gallery uploads reuse the backend Cloudinary credentials below and use the `comes/gallery` folder. `POST /api/v1/gallery/upload` returns the Cloudinary URL; `POST /api/v1/gallery` persists that URL with its event and metadata in MongoDB. Failed metadata saves retain the URL in the current upload queue so retry does not upload the same file again. Keep the page open until saving finishes. Removing a record or abandoning an upload does not delete the Cloudinary asset; unused assets must be removed separately in Cloudinary.
+
+| Method | Endpoint | Access |
+| --- | --- | --- |
+| GET | `/api/v1/gallery` | Public published photos; `event`, `page`, `limit` (max 60); `includeUnpublished=true` is honored only for authenticated admins |
+| GET | `/api/v1/gallery/albums` | Public event albums with published-photo counts |
+| POST | `/api/v1/gallery/upload` | Admin, multipart field `image`, max 3 MiB |
+| POST | `/api/v1/gallery` | Admin; event ID, title, Cloudinary HTTPS image URL, optional description and isPublished |
+| PATCH | `/api/v1/gallery/:id` | Admin; event, title, description, isPublished |
+| DELETE | `/api/v1/gallery/:id` | Admin; removes metadata only |
+
+#### Cloudinary Configuration
+
 Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` in the backend `.env` for local development and in the backend hosting environment for production, then restart/redeploy the backend. Get these values from your Cloudinary product environment's API Keys settings. Never put the API secret in frontend/Vite environment variables or commit real credentials. No unsigned upload preset is required.
 
 In **Admin > Committee & Team**, add or edit a member and choose **Upload photo**. JPEG, PNG, and WebP images up to 3 MB are accepted. The admin-only `POST /api/v1/team/avatar` accepts a single multipart `image` file, validates limits, and sends it to Cloudinary's `comes/team` folder. It returns `{ success: true, data: { url } }`. The editor previews the uploaded image; **Add Member** or **Update Member** persists that URL. An existing Cloudinary image URL can also be pasted into **Avatar URL**. Missing Cloudinary configuration returns 503 without affecting other team features.

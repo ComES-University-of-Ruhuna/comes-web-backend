@@ -26,6 +26,7 @@ import studentRoutes from './routes/student.routes';
 import competitionTeamRoutes from './routes/competitionTeam.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import quizRoutes from './routes/quiz.routes';
+import galleryRoutes from './routes/gallery.routes';
 
 // Import middleware
 import { errorHandler, notFound } from './middleware/error.middleware';
@@ -214,6 +215,7 @@ app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/competition-teams', competitionTeamRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/quizzes', quizRoutes);
+app.use('/api/v1/gallery', galleryRoutes);
 
 // ============================================
 // Error Handling
