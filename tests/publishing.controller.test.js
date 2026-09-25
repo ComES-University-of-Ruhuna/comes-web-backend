@@ -1,5 +1,6 @@
-jest.mock('../dist/models', () => ({ BlogPost: { find: jest.fn(), findOne: jest.fn(), findById: jest.fn(), countDocuments: jest.fn() }, Project: { find: jest.fn(), countDocuments: jest.fn() } }));
-const { BlogPost, Project } = require('../dist/models');
+jest.mock('../dist/models', () => ({ BlogPost: { find: jest.fn(), findOne: jest.fn(), findById: jest.fn(), countDocuments: jest.fn() }, Project: { find: jest.fn(), countDocuments: jest.fn() }, Event: { find: jest.fn(), countDocuments: jest.fn() } }));
+const { BlogPost, Project, Event } = require('../dist/models');
+const { getAllEvents } = require('../dist/controllers/event.controller');
 const { getAllProjects, getFeaturedProjects } = require('../dist/controllers/project.controller');
 const { getAllPosts, getPost, getPostBySlug, updatePost } = require('../dist/controllers/blog.controller');
 
@@ -16,6 +17,20 @@ beforeEach(() => {
   BlogPost.countDocuments.mockResolvedValue(0);
   Project.find.mockReturnValue(query);
   Project.countDocuments.mockResolvedValue(0);
+  Event.find.mockReturnValue(query);
+  Event.countDocuments.mockResolvedValue(0);
+});
+
+test.each(['current', 'past'])('event period %s uses the end date with a start date fallback', async (period) => {
+  const { body } = await invoke(getAllEvents, { query: { period, type: 'workshop', page: '2', limit: '9' } });
+  const dateFilter = { $expr: { [period === 'current' ? '$gte' : '$lt']: [{ $ifNull: ['$endDate', '$date'] }, expect.any(Date)] } };
+  const filter = period === 'current'
+    ? { type: 'workshop', $and: [{ status: { $ne: 'completed' } }, dateFilter] }
+    : { type: 'workshop', $and: [{ $or: [{ status: 'completed' }, dateFilter] }] };
+  expect(body.success).toBe(true);
+  expect(Event.find).toHaveBeenCalledWith(filter);
+  expect(Event.countDocuments).toHaveBeenCalledWith(filter);
+  expect(query.skip).toHaveBeenCalledWith(9);
 });
 
 test.each([undefined, { role: 'user' }])('public visitors cannot request drafts', async (user) => {

@@ -878,6 +878,10 @@ paths:
         - name: status
           in: query
           schema: { type: string, enum: [upcoming, ongoing, completed, cancelled] }
+        - name: period
+          in: query
+          description: Current includes non-completed events whose endDate (or date when unset) has not passed. Past includes completed events and events whose endDate (or date) has passed, regardless of status.
+          schema: { type: string, enum: [current, past] }
         - name: type
           in: query
           schema: { type: string, enum: [workshop, hackathon, seminar, competition, social, other] }

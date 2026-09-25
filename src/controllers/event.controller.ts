@@ -40,6 +40,16 @@ export const getAllEvents = asyncHandler(
       filter.status = 'upcoming';
     }
 
+    if (req.query.period === 'current' || req.query.period === 'past') {
+      const current = req.query.period === 'current';
+      const dateFilter = {
+        $expr: { [current ? '$gte' : '$lt']: [{ $ifNull: ['$endDate', '$date'] }, new Date()] },
+      };
+      filter.$and = current
+        ? [{ status: { $ne: 'completed' } }, dateFilter]
+        : [{ $or: [{ status: 'completed' }, dateFilter] }];
+    }
+
     // Search
     if (req.query.search) {
       filter.$or = [
