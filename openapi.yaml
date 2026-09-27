@@ -14,6 +14,7 @@ servers:
 
 tags:
   - name: Health
+  - name: Homepage Slides
   - name: Auth
   - name: Users
   - name: Events
@@ -41,6 +42,39 @@ components:
       description: Student JWT token from /students/login
 
   schemas:
+    HomeSlideMetadata:
+      type: object
+      properties:
+        altText: { type: string, minLength: 1, maxLength: 160 }
+        order: { type: integer, minimum: 0, maximum: 9999, default: 0 }
+        isPublished: { type: boolean, default: false }
+    HomeSlide:
+      allOf:
+        - $ref: '#/components/schemas/HomeSlideMetadata'
+        - type: object
+          properties:
+            _id: { type: string }
+            image: { type: string, format: uri }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    HomeSlideListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            slides:
+              type: array
+              items: { $ref: '#/components/schemas/HomeSlide' }
+    HomeSlideResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            slide: { $ref: '#/components/schemas/HomeSlide' }
     GalleryPhoto:
       type: object
       properties:
@@ -551,6 +585,120 @@ components:
 # PATHS
 # ════════════════════════════════════════════════════════
 paths:
+  /homepage-slides:
+    get:
+      tags: [Homepage Slides]
+      summary: List published homepage slides
+      description: Sorted by order then _id. Only _id, image, altText and order are returned. Drafts are never included.
+      responses:
+        '200':
+          description: Published slides
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HomeSlideListResponse' }
+    post:
+      tags: [Homepage Slides]
+      summary: Create homepage slide (admin only)
+      security: [{ bearerAuth: [] }, { studentBearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/HomeSlideMetadata'
+                - type: object
+                  required: [image, altText]
+                  properties:
+                    image: { type: string, format: uri, maxLength: 2000, description: HTTPS URL on res.cloudinary.com returned by upload }
+      responses:
+        '201':
+          description: Created slide
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HomeSlideResponse' }
+        '400': { description: Invalid metadata }
+        '401': { description: Authentication required }
+        '403': { description: Admin access required }
+  /homepage-slides/admin:
+    get:
+      tags: [Homepage Slides]
+      summary: List all homepage slides including drafts (admin only)
+      security: [{ bearerAuth: [] }, { studentBearerAuth: [] }]
+      responses:
+        '200':
+          description: All slides sorted by order then _id
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HomeSlideListResponse' }
+        '401': { description: Authentication required }
+        '403': { description: Admin access required }
+  /homepage-slides/upload:
+    post:
+      tags: [Homepage Slides]
+      summary: Upload homepage image (admin only)
+      description: JPEG, PNG or WebP, at most 3 MiB. Uploads to comes/homepage; metadata must be saved separately.
+      security: [{ bearerAuth: [] }, { studentBearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        '201':
+          description: Uploaded image URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      url: { type: string, format: uri }
+        '400': { description: Invalid file or upload size }
+        '401': { description: Authentication required }
+        '403': { description: Admin access required }
+        '502': { description: Image upload failed }
+        '503': { description: Cloudinary uploads are not configured }
+  /homepage-slides/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string }, description: Slide MongoDB ID }
+    patch:
+      tags: [Homepage Slides]
+      summary: Edit slide description, order or publishing state (admin only)
+      security: [{ bearerAuth: [] }, { studentBearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HomeSlideMetadata' }
+      responses:
+        '200':
+          description: Updated slide
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HomeSlideResponse' }
+        '400': { description: Invalid ID or metadata }
+        '401': { description: Authentication required }
+        '403': { description: Admin access required }
+        '404': { description: Slide not found }
+    delete:
+      tags: [Homepage Slides]
+      summary: Remove slide metadata (admin only)
+      description: Does not delete the Cloudinary asset.
+      security: [{ bearerAuth: [] }, { studentBearerAuth: [] }]
+      responses:
+        '204': { description: Removed }
+        '400': { description: Invalid ID }
+        '401': { description: Authentication required }
+        '403': { description: Admin access required }
+        '404': { description: Slide not found }
   /gallery:
     get:
       tags: [Gallery]

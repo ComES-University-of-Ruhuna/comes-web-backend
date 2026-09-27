@@ -2,6 +2,23 @@
 
 A secure, production-ready Node.js/Express backend for the ComES website.
 
+## Homepage Slides
+
+The landing-page slideshow is managed under **Admin > Homepage Slides**. Slide records store a Cloudinary `image` URL, required `altText` (1-160 characters), integer `order` (0-9999, default 0), and `isPublished` (default false). Public results contain published slides only, sorted by `order` then `_id`; the public endpoint never accepts a draft override.
+
+All paths below are relative to `/api/v1`:
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/homepage-slides` | Public; `{success, data: {slides}}` with image, altText, order, and _id |
+| GET | `/homepage-slides/admin` | Admin; all slides, including drafts |
+| POST | `/homepage-slides/upload` | Admin; one multipart `image`, returns `{success, data: {url}}` |
+| POST | `/homepage-slides` | Admin; create `{image, altText, order, isPublished}` |
+| PATCH | `/homepage-slides/:id` | Admin; edit altText, order, and isPublished |
+| DELETE | `/homepage-slides/:id` | Admin; delete slide metadata, returns 204 |
+
+Uploads accept JPEG/PNG/WebP up to 3 MiB through the shared image helper and use Cloudinary's `comes/homepage` folder. The existing backend-only `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` are required; missing configuration returns 503. Creation accepts HTTPS Cloudinary URLs only. Uploading does not publish or create metadata until the form is saved. Cloudinary assets are not automatically removed on cancellation or deletion. Existing installations require no data migration; an empty slide collection leaves the original frontend banner in place.
+
 ## Event Organizing Committees
 
 Each event may have registered student members with an OC role, team, explicit `isChair` permission, and contribution notes. Committee data is excluded from public event responses. Chair access does not change a student's global role and is checked atomically on event/contribution writes. Only administrators manage assignments; role names alone never grant chair access.

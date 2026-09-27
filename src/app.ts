@@ -27,6 +27,7 @@ import competitionTeamRoutes from './routes/competitionTeam.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import quizRoutes from './routes/quiz.routes';
 import galleryRoutes from './routes/gallery.routes';
+import homeSlideRoutes from './routes/homeSlide.routes';
 
 // Import middleware
 import { errorHandler, notFound } from './middleware/error.middleware';
@@ -216,6 +217,7 @@ app.use('/api/v1/competition-teams', competitionTeamRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/quizzes', quizRoutes);
 app.use('/api/v1/gallery', galleryRoutes);
+app.use('/api/v1/homepage-slides', homeSlideRoutes);
 
 // ============================================
 // Error Handling
