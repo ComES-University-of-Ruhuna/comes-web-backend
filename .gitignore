@@ -31,6 +31,10 @@ uploads/*
 # Test coverage
 coverage/
 
+# Mock server
+mock-server/
+.env.mock
+
 # Misc
 *.tmp
 *.temp

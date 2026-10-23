@@ -17,7 +17,17 @@ router.get('/admin', getAdminHomeSlides);
 router.post('/upload', uploadHomeSlide);
 router.post('/', validate([
   body('altText').exists(),
-  body('image').isString().bail().isLength({ max: 2000 }).isURL({ protocols: ['https'], require_protocol: true }).bail().custom((value: string) => new URL(value).hostname === 'res.cloudinary.com'),
+  body('image').isString().bail().isLength({ max: 2000 }).isURL({
+    protocols: process.env.NODE_ENV === 'production' ? ['https'] : ['https', 'http'],
+    require_protocol: true,
+    require_tld: process.env.NODE_ENV === 'production',
+  }).bail().custom((value: string) => {
+    const host = new URL(value).hostname;
+    if (process.env.NODE_ENV === 'production') {
+      return host === 'res.cloudinary.com';
+    }
+    return host === 'res.cloudinary.com' || host === 'localhost' || host === '127.0.0.1';
+  }),
   ...fields,
 ]), createHomeSlide);
 router.patch('/:id', validate([...commonValidations.mongoId('id'), ...fields]), updateHomeSlide);

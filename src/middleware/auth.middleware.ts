@@ -229,3 +229,59 @@ export const protectStudent = asyncHandler(
     }
   }
 );
+
+/**
+ * Middleware to protect routes that can be accessed by either a student or an admin
+ */
+export const protectStudentOrAdmin = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    let token: string | undefined;
+
+    if (req.headers.authorization?.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies?.studentJwt) {
+      token = req.cookies.studentJwt;
+    } else if (req.cookies?.jwt) {
+      token = req.cookies.jwt;
+    }
+
+    if (!token) {
+      throw new AuthenticationError('You are not logged in. Please log in to access this resource.');
+    }
+
+    try {
+      const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
+
+      if (decoded.type === 'student') {
+        const student = await Student.findById(decoded.id);
+        if (!student) {
+          throw new AuthenticationError('The student belonging to this token no longer exists.');
+        }
+        if ((decoded.passwordVersion ?? 0) !== (student.passwordVersion ?? 0)) {
+          throw new AuthenticationError('Your password has been reset. Please log in again.');
+        }
+        req.student = student;
+        return next();
+      }
+
+      // Check admin/user
+      const user = await User.findById(decoded.id);
+      if (!user) {
+        throw new AuthenticationError('The user belonging to this token no longer exists.');
+      }
+      if (user.changedPasswordAfter(decoded.iat || 0)) {
+        throw new AuthenticationError('User recently changed password! Please log in again.');
+      }
+      req.user = user;
+      return next();
+    } catch (error) {
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new AuthenticationError('Invalid token. Please log in again.');
+      }
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new AuthenticationError('Your token has expired. Please log in again.');
+      }
+      throw error;
+    }
+  }
+);

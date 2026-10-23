@@ -91,19 +91,21 @@ if (process.env.VERCEL !== '1') {
       });
 
       // Graceful shutdown
-      process.on('SIGTERM', () => {
-        logger.info('👋 SIGTERM RECEIVED. Shutting down gracefully');
-        server.close(() => {
+      const shutdown = async () => {
+        logger.info('👋 Shutting down gracefully');
+        server.close(async () => {
           logger.info('💤 Process terminated!');
+          try {
+            await mongoose.connection.close();
+          } catch (closeError) {
+            logger.warn('Failed to close database connection gracefully:', closeError);
+          }
+          process.exit(0);
         });
-      });
+      };
 
-      process.on('SIGINT', () => {
-        logger.info('👋 SIGINT RECEIVED. Shutting down gracefully');
-        server.close(() => {
-          logger.info('💤 Process terminated!');
-        });
-      });
+      process.on('SIGTERM', shutdown);
+      process.on('SIGINT', shutdown);
 
     } catch (error) {
       logger.error('Failed to start server:', error);

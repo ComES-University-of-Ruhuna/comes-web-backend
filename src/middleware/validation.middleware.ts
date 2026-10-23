@@ -186,8 +186,12 @@ const eventMediaAndSchedule = () => [
     .custom((value, { req }) => !req.body.date || new Date(value) > new Date(req.body.date))
     .withMessage('End time must be after the start time'),
   body('image').optional({ checkFalsy: true }).isString().bail().isLength({ max: 2000 }).bail()
-    .isURL({ protocols: ['http', 'https'], require_protocol: true })
-    .withMessage('Image must be an HTTP or HTTPS URL'),
+    .isURL({
+      protocols: process.env.NODE_ENV === 'production' ? ['https'] : ['http', 'https'],
+      require_protocol: true,
+      require_tld: process.env.NODE_ENV === 'production',
+    })
+    .withMessage('Image must be a valid image URL'),
 ];
 
 export const eventValidations = {

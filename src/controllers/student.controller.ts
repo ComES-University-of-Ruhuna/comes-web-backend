@@ -471,6 +471,7 @@ export const registerForEvent = asyncHandler(
     // Register student
     student.registeredEvents.push(event._id);
     event.registrations.push(studentId!);
+    event.registeredCount = event.registrations.length;
 
     await Promise.all([student.save(), event.save()]);
 
@@ -511,6 +512,7 @@ export const unregisterFromEvent = asyncHandler(
     event.registrations = event.registrations.filter(
       (id: mongoose.Types.ObjectId) => id.toString() !== studentId?.toString()
     );
+    event.registeredCount = event.registrations.length;
 
     await Promise.all([student.save(), event.save()]);
 
@@ -531,7 +533,7 @@ export const getStudentPortfolio = asyncHandler(
     const { username } = req.params;
 
     const student = await Student.findOne({ username })
-      .select('-password -emailVerificationToken -emailVerificationExpires -passwordResetToken -passwordResetExpires')
+      .select('-password -emailVerificationToken -emailVerificationExpires -passwordResetToken -passwordResetExpires -passwordVersion -passwordChangedAt')
       .populate({
         path: 'registeredEvents',
         select: 'title description date location thumbnail',
