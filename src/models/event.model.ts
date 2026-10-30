@@ -164,6 +164,14 @@ eventSchema.virtual('availableSpots').get(function (this: IEvent): number | null
 // Pre-save Middleware
 // ============================================
 
+// Keep registeredCount in sync with registrations array
+eventSchema.pre<IEvent>('save', function (next) {
+  if (this.isModified('registrations') || this.isNew) {
+    this.registeredCount = this.registrations ? this.registrations.length : 0;
+  }
+  next();
+});
+
 eventSchema.pre<IEvent>('save', function (next) {
   if (this.isModified('title')) {
     this.slug = slugify(this.title, { lower: true, strict: true });

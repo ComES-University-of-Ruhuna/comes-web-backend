@@ -66,8 +66,8 @@ const corsOptions: cors.CorsOptions = {
         : []),
       'https://comes-web-frontend.vercel.app',
       'https://comesuor.lk',
-      // Allow all Vercel preview deployments
-      /^https:\/\/comes-web-frontend.*\.vercel\.app$/,
+      // Allow specific Vercel preview deployments
+      /^https:\/\/comes-web-frontend-[a-z0-9]+-[a-z0-9-]+\.vercel\.app$/,
     ];
 
     // Allow requests with no origin (mobile apps, Postman, etc.)

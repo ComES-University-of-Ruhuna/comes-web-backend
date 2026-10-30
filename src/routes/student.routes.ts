@@ -24,7 +24,7 @@ import {
   sendNotificationToStudent,
   sendNotificationToAllStudents,
 } from '../controllers/student.controller';
-import { protect, restrictTo, protectStudent } from '../middleware/auth.middleware';
+import { protect, restrictTo, protectStudent, protectStudentOrAdmin } from '../middleware/auth.middleware';
 import { validate, authValidations } from '../middleware/validation.middleware';
 import { studentPasswordRecovery } from '../controllers/passwordRecovery.controller';
 import { body, param } from 'express-validator';
@@ -72,7 +72,7 @@ router.post('/forgot-password', validate(authValidations.forgotPassword), studen
 router.patch('/reset-password/:token', validate(authValidations.resetPassword), studentPasswordRecovery.resetPassword);
 router.post('/refresh-token', refreshStudentToken);
 router.get('/verify-email/:token', verifyEmail);
-router.get('/portfolio/:username', getStudentPortfolio);
+router.get('/portfolio/:username', protectStudentOrAdmin, getStudentPortfolio);
 
 // Admin routes (must be before protectStudent middleware)
 router.get('/', protect, restrictTo('admin'), getAllStudents);
